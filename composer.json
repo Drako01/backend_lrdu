@@ -1,0 +1,55 @@
+{
+    "name": "zelcar/secret-forest",
+    "description": "Secret Forest Backend",
+    "keywords": [
+        "backend",
+        "game",
+        "php",
+        "jwt",
+        "SQL"
+    ],
+    "homepage": "https://github.com/Zelcar/ZelcarGamesBackend",
+    "license": "Apache 2.0",
+    "authors": [
+        {
+            "name": "Alejandro Daniel Di Stefano",
+            "email": "addistefano@live.com.ar",
+            "homepage": "https://github.com/Drako01",
+            "role": "Developer Leader"
+        }
+    ],
+    "require": {
+        "firebase/php-jwt": "^6.10",
+        "phpmailer/phpmailer": "^6.9",
+        "predis/predis": "^2.3",
+        "cboden/ratchet": "^0.4.4",
+        "react/event-loop": "^1.5",
+        "react/http": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Security\\": "src/Security/",
+            "OpenApi\\": "vendor/zircote/swagger-php/src/"
+        }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Zelcar/ZelcarGamesBackend.git"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/Zelcar/ZelcarGamesBackend/issues",
+        "source": "https://github.com/Zelcar/ZelcarGamesBackend"
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "@php artisan cache:clear"
+        ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require-dev": {
+        "phpunit/phpunit": "11.5.15"
+    }
+}

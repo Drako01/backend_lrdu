@@ -1,0 +1,90 @@
+<?php
+declare(strict_types=1);
+
+#region Imports
+require_once __DIR__ . '/../repositories/ProductoRepository.php';
+require_once __DIR__ . '/../repositories/CategoriaRepository.php';
+require_once __DIR__ . '/../models/Producto.php';
+#endregion
+
+final class ProductoService
+{
+    private ProductoRepository $repo;
+    private CategoriaRepository $catRepo;
+
+    public function __construct(?ProductoRepository $repo = null, ?CategoriaRepository $catRepo = null)
+    {
+        $this->repo    = $repo    instanceof ProductoRepository ? $repo    : new ProductoRepository();
+        $this->catRepo = $catRepo instanceof CategoriaRepository ? $catRepo : new CategoriaRepository();
+    }
+
+    public function create(array $data): Producto
+    {
+        // Validaciones base
+        $nombre = trim((string)($data['nombre'] ?? ''));
+        $idCat  = (int)($data['id_categoria'] ?? $data['idCategoria'] ?? 0);
+        if ($nombre === '') throw new InvalidArgumentException('El nombre es requerido.');
+        if ($idCat <= 0)    throw new InvalidArgumentException('id_categoria es requerido y debe ser > 0.');
+        if (!$this->catRepo->findById($idCat)) {
+            throw new InvalidArgumentException("La categoría $idCat no existe.");
+        }
+
+        $producto = Producto::fromArray($data);
+        $this->repo->save($producto);
+        return $producto;
+    }
+
+    /** @return Producto[] */
+    public function getAll(): array
+    {
+        return $this->repo->findAll();
+    }
+
+    public function getById(int $id): ?Producto
+    {
+        if ($id <= 0) throw new InvalidArgumentException('ID inválido.');
+        return $this->repo->findById($id);
+    }
+
+    public function update(int $id, array $data): void
+    {
+        $p = $this->getById($id);
+        if (!$p) throw new InvalidArgumentException("Producto $id no encontrado.");
+
+        // Actualizaciones parciales coherentes con el modelo
+        if (isset($data['nombre']))            $p->setNombre((string)$data['nombre']);
+        if (isset($data['descripcion']))       $p->setDescripcion($data['descripcion'] !== null ? (string)$data['descripcion'] : null);
+        if (isset($data['id_categoria']))      $this->validateAndSetCategoria($p, (int)$data['id_categoria']);
+        if (isset($data['idCategoria']))       $this->validateAndSetCategoria($p, (int)$data['idCategoria']);
+        if (isset($data['stock']))             $p->setStock((int)$data['stock']);
+        if (isset($data['precio']))            $p->setPrecio((float)$data['precio']);
+        if (isset($data['marca']))             $p->setMarca($data['marca'] !== null ? (string)$data['marca'] : null);
+        if (isset($data['modelo']))            $p->setModelo($data['modelo'] !== null ? (string)$data['modelo'] : null);
+        if (isset($data['caracteristicas']))   $p->setCaracteristicas($data['caracteristicas'] !== null ? (string)$data['caracteristicas'] : null);
+        if (isset($data['codigo_interno']))    $p->setCodigoInterno($data['codigo_interno'] !== null ? (string)$data['codigo_interno'] : null);
+        if (isset($data['codigoInterno']))     $p->setCodigoInterno($data['codigoInterno'] !== null ? (string)$data['codigoInterno'] : null);
+        if (isset($data['imagen_principal']))  $p->setImagenPrincipal($data['imagen_principal'] !== null ? (string)$data['imagen_principal'] : null);
+        if (isset($data['imagenPrincipal']))   $p->setImagenPrincipal($data['imagenPrincipal'] !== null ? (string)$data['imagenPrincipal'] : null);
+        if (array_key_exists('favorito', $data)) $p->setFavorito((bool)$data['favorito']);
+        if (array_key_exists('activo', $data))   $p->setActivo((bool)$data['activo']);
+
+        $this->repo->update($p);
+    }
+
+    public function delete(int $id): bool
+    {
+        $p = $this->repo->findById($id);
+        if (!$p) return false;
+        $this->repo->delete($id);
+        return true;
+    }
+
+    private function validateAndSetCategoria(Producto $p, int $idCat): void
+    {
+        if ($idCat <= 0) throw new InvalidArgumentException('id_categoria inválido.');
+        if (!$this->catRepo->findById($idCat)) {
+            throw new InvalidArgumentException("La categoría $idCat no existe.");
+        }
+        $p->setIdCategoria($idCat);
+    }
+}

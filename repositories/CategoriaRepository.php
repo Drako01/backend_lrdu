@@ -1,0 +1,76 @@
+<?php
+declare(strict_types=1);
+
+#region Imports
+require_once __DIR__ . '/../config/Conexion.php';
+require_once __DIR__ . '/../models/Categoria.php';
+require_once __DIR__ . '/../interfaces/Repository.Interface.php';
+require_once __DIR__ . '/../interfaces/CategoriaRepository.Interface.php';
+#endregion
+
+final class CategoriaRepository implements CategoriaRepositoryInterface
+{
+    private PDO $pdo;
+
+    public function __construct()
+    {
+        $conn = Conexion::getInstance()->getConnection();
+        if (!$conn instanceof PDO) {
+            throw new RuntimeException('No se pudo obtener la conexión PDO.');
+        }
+        $this->pdo = $conn;
+    }
+
+    public function findById(int $id): ?object
+    {
+        $st = $this->pdo->prepare('SELECT id_cat, nombre FROM categorias WHERE id_cat = :id');
+        $st->execute([':id' => $id]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->hydrate($row) : null;
+    }
+
+    public function findAll(): array
+    {
+        $st = $this->pdo->query('SELECT id_cat, nombre FROM categorias ORDER BY nombre ASC');
+        $out = [];
+        while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+            $out[] = $this->hydrate($row);
+        }
+        return $out;
+    }
+
+    public function save(object $entity): void
+    {
+        if (!$entity instanceof Categoria) {
+            throw new InvalidArgumentException('Entidad inválida para CategoriaRepository::save');
+        }
+        $st = $this->pdo->prepare('INSERT INTO categorias (nombre) VALUES (:nombre)');
+        $st->execute([':nombre' => $entity->getNombre()]);
+        $entity->setIdCat((int)$this->pdo->lastInsertId());
+    }
+
+    public function update(object $entity): void
+    {
+        if (!$entity instanceof Categoria || $entity->getIdCat() === null) {
+            throw new InvalidArgumentException('Entidad inválida o sin ID para update.');
+        }
+        $st = $this->pdo->prepare('UPDATE categorias SET nombre = :nombre WHERE id_cat = :id');
+        $st->execute([
+            ':nombre' => $entity->getNombre(),
+            ':id'     => $entity->getIdCat(),
+        ]);
+    }
+
+    public function delete(int $id): void
+    {
+        $st = $this->pdo->prepare('DELETE FROM categorias WHERE id_cat = :id');
+        $st->execute([':id' => $id]);
+    }
+
+    private function hydrate(array $row): Categoria
+    {
+        $c = new Categoria($row['nombre']);
+        $c->setIdCat((int)$row['id_cat']);
+        return $c;
+    }
+}
