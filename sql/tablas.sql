@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS productos (
   caracteristicas       TEXT          DEFAULT NULL,
 
   codigo_interno        VARCHAR(64)   DEFAULT NULL,
-  imagen_principal      VARCHAR(2048)  DEFAULT NULL,
+  imagen_principal      VARCHAR(4096)  DEFAULT NULL,
 
   favorito              BOOLEAN       NOT NULL DEFAULT FALSE,
   activo                BOOLEAN       NOT NULL DEFAULT TRUE,
