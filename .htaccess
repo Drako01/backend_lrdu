@@ -1,64 +1,31 @@
 # Activa rewrite
 RewriteEngine On
 
-# Importante en subcarpeta: ajustá la base
-# Si tu app está en https://dominio.com/miapp/, dejá /miapp/
-RewriteBase /miapp/
+# IMPORTANTE: subdominio apuntando a /public_html/back -> base = /
+RewriteBase /
 
-# HTTPS (opcional, soporta proxy/CDN)
-#RewriteCond %{HTTPS} !=on [OR]
-#RewriteCond %{HTTP:X-Forwarded-Proto} !https
-#RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
-#RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-
-# Evitar reescrituras en bucle y permitir archivos/directorios reales
+# No reescribir si es archivo/carpeta real
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Excluir recursos estáticos de la reescritura (sumo fuentes y otros)
-RewriteCond %{REQUEST_URI} \.(css|js|jpg|jpeg|png|gif|ico|svg|webp|woff2?|ttf|eot|mp4|webm)$ [NC]
-RewriteRule ^ - [L]
-# permitir el challenge de AutoSSL/LE
-RewriteCond %{REQUEST_URI} ^/.well-known/acme-challenge/ [NC]
-RewriteRule - - [L]
-
-# Reescribir todo lo demás a index.php
+# Enviar todo a index.php
 RewriteRule ^ index.php [QSA,L]
 
-# Index por defecto (por si el host no lo tiene)
-DirectoryIndex index.php
+# Asegurar que PHP "vea" HTTPS detrás de Cloudflare (por si PHP no lo detecta)
+SetEnvIfNoCase X-Forwarded-Proto "https" HTTPS=on
 
-# Página de error 404 (ajusta la ruta si tu 404.php existe)
-ErrorDocument 404 /miapp/404.php
-
-# Bloquea archivos sensibles (.env, .git, etc.)
-<FilesMatch "^\.">
+# PROTECCIÓN: negar acceso a archivos sensibles
+<FilesMatch "^(?:\.env|composer\.(?:json|lock|phar)|README\.md|LICENSE|.*\.sql|.*\.sh)$">
   Require all denied
 </FilesMatch>
 
-# Bloquear métodos peligrosos
-<IfModule mod_rewrite.c>
-  RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK) [NC]
-  RewriteRule .* - [F]
-</IfModule>
+# PROTECCIÓN: carpetas que jamás deben servirse
+RedirectMatch 404 ^/(?:vendor|sql|tests|\.git|\.vscode)(/|$)
 
-# No exponer vendor por accidente
-<IfModule mod_alias.c>
-  RedirectMatch 403 ^/miapp/vendor/
-</IfModule>
-
-# Compresión
-<IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/xml application/xml application/xml+rss text/javascript application/json
-</IfModule>
-
-# Cache estáticos
+# Opcional: cache estático (tuneable)
 <IfModule mod_expires.c>
   ExpiresActive On
-  ExpiresByType image/jpg "access plus 1 month"
-  ExpiresByType image/jpeg "access plus 1 month"
-  ExpiresByType image/gif "access plus 1 month"
   ExpiresByType image/png "access plus 1 month"
   ExpiresByType image/svg+xml "access plus 1 month"
   ExpiresByType image/webp "access plus 1 month"
@@ -68,8 +35,3 @@ ErrorDocument 404 /miapp/404.php
   ExpiresByType text/css "access plus 1 month"
   ExpiresByType application/json "access plus 1 week"
 </IfModule>
-
-# Filtro básico contra XSS en querystring
-RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC,OR]
-RewriteCond %{QUERY_STRING} (\<|%3C).*iframe.*(\>|%3E) [NC]
-RewriteRule .* - [F]
