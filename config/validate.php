@@ -15,8 +15,8 @@ if ($isLocal) {
         // --- DB ---
         'DB_SERVER'   => $_ENV['DB_SERVER']      ?? '127.0.0.1',
         'DB_USER'     => $_ENV['DB_USER']        ?? 'root',
-        'DB_PASSWORD' => $_ENV['DB_PASSWORD']    ?? '',
-        'DB_NAME'     => $_ENV['DB_NAME']        ?? '',
+        'DB_PASSWORD' => $_ENV['DB_PASSWORD']    ?? 'Alejandro',
+        'DB_NAME'     => $_ENV['DB_NAME']        ?? 'lrdu',
         'DB_PORT'     => $_ENV['DB_PORT']        ?? '3306',
 
         // --- App ---

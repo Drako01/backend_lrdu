@@ -1,48 +1,75 @@
+# Activa rewrite
 RewriteEngine On
 
-# Proteger archivos sensibles
-<FilesMatch "^\.">
-    Require all denied
-</FilesMatch>
+# Importante en subcarpeta: ajustá la base
+# Si tu app está en https://dominio.com/miapp/, dejá /miapp/
+RewriteBase /miapp/
 
-# Redirección a HTTPS
-# RewriteCond %{HTTPS} !=on
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+# HTTPS (opcional, soporta proxy/CDN)
+#RewriteCond %{HTTPS} !=on [OR]
+#RewriteCond %{HTTP:X-Forwarded-Proto} !https
+#RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+#RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
-# Evitar reescrituras en bucle para index.php
-RewriteCond %{REQUEST_URI} !^/index\.php$
+# Evitar reescrituras en bucle y permitir archivos/directorios reales
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
-# Excluir recursos estáticos de la reescritura
-RewriteCond %{REQUEST_URI} !\.(css|js|jpg|jpeg|png|gif|ico|svg|webp)$ [NC]
+# Excluir recursos estáticos de la reescritura (sumo fuentes y otros)
+RewriteCond %{REQUEST_URI} \.(css|js|jpg|jpeg|png|gif|ico|svg|webp|woff2?|ttf|eot|mp4|webm)$ [NC]
+RewriteRule ^ - [L]
+# permitir el challenge de AutoSSL/LE
+RewriteCond %{REQUEST_URI} ^/.well-known/acme-challenge/ [NC]
+RewriteRule - - [L]
 
 # Reescribir todo lo demás a index.php
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php [QSA,L]
+RewriteRule ^ index.php [QSA,L]
 
-# Página de error 404 personalizada
-ErrorDocument 404 /404.php
+# Index por defecto (por si el host no lo tiene)
+DirectoryIndex index.php
 
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/css application/javascript text/xml application/xml application/xml+rss text/javascript
-</IfModule>
+# Página de error 404 (ajusta la ruta si tu 404.php existe)
+ErrorDocument 404 /miapp/404.php
 
+# Bloquea archivos sensibles (.env, .git, etc.)
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+# Bloquear métodos peligrosos
 <IfModule mod_rewrite.c>
-    RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK) [NC]
-    RewriteRule .* - [F]
+  RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK) [NC]
+  RewriteRule .* - [F]
 </IfModule>
 
+# No exponer vendor por accidente
+<IfModule mod_alias.c>
+  RedirectMatch 403 ^/miapp/vendor/
+</IfModule>
+
+# Compresión
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/xml application/xml application/xml+rss text/javascript application/json
+</IfModule>
+
+# Cache estáticos
 <IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType image/jpg "access plus 1 month"
-    ExpiresByType image/jpeg "access plus 1 month"
-    ExpiresByType image/gif "access plus 1 month"
-    ExpiresByType image/png "access plus 1 month"
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType application/json "access plus 1 week"
+  ExpiresActive On
+  ExpiresByType image/jpg "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType image/gif "access plus 1 month"
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType image/webp "access plus 1 month"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/json "access plus 1 week"
 </IfModule>
 
+# Filtro básico contra XSS en querystring
 RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC,OR]
 RewriteCond %{QUERY_STRING} (\<|%3C).*iframe.*(\>|%3E) [NC]
 RewriteRule .* - [F]
