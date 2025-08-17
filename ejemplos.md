@@ -292,3 +292,45 @@ ALTER TABLE productos
 * `500` – Error interno (revisar logs).
 
 ---
+
+## header predeterminado
+
+```js
+// para GET/DELETE (sin body)
+const headers = {
+  Authorization: `Bearer ${token}`,
+  Accept: 'application/json'
+};
+
+// para POST/PUT/PATCH (con JSON)
+const headersWithJson = {
+  Authorization: `Bearer ${token}`,
+  Accept: 'application/json',
+  'Content-Type': 'application/json'
+};
+
+```
+
+### Ejemplos
+
+```js
+// GET
+await fetch('https://backend.losreyesdelusado.com.ar/api/users/6', {
+  method: 'GET',
+  headers
+});
+
+// DELETE
+await fetch('https://backend.losreyesdelusado.com.ar/api/users/6', {
+  method: 'DELETE',
+  headers
+});
+
+// POST con body JSON
+await fetch('https://backend.losreyesdelusado.com.ar/api/users', {
+  method: 'POST',
+  headers: headersWithJson,
+  body: JSON.stringify(payload)
+});
+
+```
