@@ -281,6 +281,43 @@ class AuthMiddleware
         print $body;
     }
 
+
+
+    // 🔹 Extrae Bearer token de todas las fuentes razonables
+    private function extractBearerToken(): ?string
+    {
+        // 1) Unificar headers (getallheaders + SERVER + apache_request_headers)
+        $headers = [];
+        if (function_exists('getallheaders')) {
+            foreach (getallheaders() as $k => $v) $headers[strtolower($k)] = $v;
+        }
+        foreach ($_SERVER as $k => $v) {
+            if (strpos($k, 'HTTP_') === 0) {
+                $name = strtolower(str_replace('_', '-', substr($k, 5)));
+                $headers[$name] = $v;
+            }
+        }
+        if (empty($headers) && function_exists('apache_request_headers')) {
+            foreach (apache_request_headers() as $k => $v) $headers[strtolower($k)] = $v;
+        }
+
+        // 2) Authorization puede venir por varios caminos en cPanel/Apache
+        $auth =
+            ($headers['authorization'] ?? null)                                 // normal
+            ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? null)                          // fastcgi/fpm
+            ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null)                 // cPanel/Apache
+            ?? ($headers['x-authorization'] ?? null);                            // plan B opcional
+
+        if (!$auth) return null;
+
+        // 3) Aceptar "Bearer xxx" case-insensitive y con espacios
+        if (preg_match('/^\s*Bearer\s+(.+)\s*$/i', $auth, $m)) {
+            return trim($m[1]);
+        }
+        return null;
+    }
+
+    // 🔹 Obtiene el token o responde 401 y corta
     private function getHeadersAndExtractToken()
     {
         $token = $this->extractBearerToken();
@@ -293,39 +330,20 @@ class AuthMiddleware
         return $token;
     }
 
-    private function extractBearerToken(): ?string
+    // 🔹 IP real por detrás de Cloudflare (útil si comparás claim "ip")
+    private function getRealClientIp(): string
     {
-        // 1) Intenta getallheaders()
-        $headers = function_exists('getallheaders') ? getallheaders() : [];
-
-        // 2) Busca Authorization en varias formas
-        $auth = $headers['Authorization'] ?? $headers['authorization'] ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? null);
-
-        // 3) Fallback apache_request_headers()
-        if (!$auth && function_exists('apache_request_headers')) {
-            $ah = apache_request_headers();
-            foreach ($ah as $k => $v) {
-                if (strtolower($k) === 'authorization') {
-                    $auth = $v;
-                    break;
-                }
-            }
-        }
-
-        if (!$auth || stripos($auth, 'Bearer ') !== 0) {
-            return null;
-        }
-        return trim(substr($auth, 7));
+        return $_SERVER['HTTP_CF_CONNECTING_IP']
+            ?? $_SERVER['HTTP_X_FORWARDED_FOR']
+            ?? $_SERVER['REMOTE_ADDR']
+            ?? '0.0.0.0';
     }
 
-    /**
-     * Testeado
-     */
+    // 🔹 (Opcional) en getUserFromToken() validá el claim "ip" si lo incluís al firmar
     protected function getUserFromToken()
     {
         try {
             $token = $this->getHeadersAndExtractToken();
-
             $decodedToken = $this->getJwtInstance()->validateToken($token);
             if (!is_object($decodedToken)) {
                 $this->sendJsonResponse([
@@ -342,17 +360,23 @@ class AuthMiddleware
                 ], 403);
             }
 
+            // ✅ Validación IP opcional (si tu token trae "ip")
+            if (!empty($decodedToken->ip)) {
+                $reqIp = $this->getRealClientIp();
+                if (trim((string)$decodedToken->ip) !== $reqIp) {
+                    $this->sendJsonResponse([
+                        'status'  => 'Error',
+                        'message' => 'Token inválido por IP.',
+                    ], 403);
+                }
+            }
+
             return ['id' => $user_id];
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
             $this->sendJsonResponse([
                 'status'  => 'Error',
                 'message' => $e->getMessage()
             ], $e->getCode() ?: 500);
         }
     }
-
-    #endregion
-
-
-
 }

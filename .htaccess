@@ -1,36 +1,43 @@
-# Activa rewrite
-RewriteEngine On
+# ==== Seguridad & compatibilidad
+Options -Indexes -MultiViews
 
-# IMPORTANTE: subdominio apuntando a /public_html/back -> base = /
-RewriteBase /
+# ==== Hacer llegar Authorization a PHP (Apache/FPM/cPanel)
+CGIPassAuth On
+SetEnvIfNoCase Authorization "^(.*)$" HTTP_AUTHORIZATION=$1
+
+RewriteEngine On
 
 # No reescribir si es archivo/carpeta real
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Enviar todo a index.php
+# Extra: si llega Authorization por header, exponerlo a PHP
+RewriteCond %{HTTP:Authorization} .
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Front controller: todo a index.php
 RewriteRule ^ index.php [QSA,L]
 
-# Asegurar que PHP "vea" HTTPS detrás de Cloudflare (por si PHP no lo detecta)
-SetEnvIfNoCase X-Forwarded-Proto "https" HTTPS=on
+# HTTPS detrás de Cloudflare/proxy
+SetEnvIfNoCase X-Forwarded-Proto "^https$" HTTPS=on
 
-# PROTECCIÓN: negar acceso a archivos sensibles
-<FilesMatch "^(?:\.env|composer\.(?:json|lock|phar)|README\.md|LICENSE|.*\.sql|.*\.sh)$">
+# Proteger archivos sensibles
+<FilesMatch "^(?:\.env|composer\.(?:json|lock|phar)|README\.md|LICENSE|.*\.(sql|sh))$">
   Require all denied
 </FilesMatch>
 
-# PROTECCIÓN: carpetas que jamás deben servirse
-RedirectMatch 404 ^/(?:vendor|sql|tests|\.git|\.vscode)(/|$)
+# Bloquear carpetas internas
+RedirectMatch 404 ^/(?:vendor|tests|\.git|\.vscode)(/|$)
 
-# Opcional: cache estático (tuneable)
+# Cache de estáticos (opcional)
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType image/png "access plus 1 month"
   ExpiresByType image/svg+xml "access plus 1 month"
   ExpiresByType image/webp "access plus 1 month"
   ExpiresByType font/woff2 "access plus 1 year"
-  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/woff  "access plus 1 year"
   ExpiresByType application/javascript "access plus 1 month"
   ExpiresByType text/css "access plus 1 month"
   ExpiresByType application/json "access plus 1 week"
