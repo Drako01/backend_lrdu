@@ -114,16 +114,32 @@ final class UserController
     public function deleteUser(int $id): void
     {
         try {
+            if ($id <= 0) {
+                ResponseHelper::error('ID inválido.', 400);
+                return;
+            }
+
+            // 1) verificar existencia
+            $user = $this->service->getUserById($id); // devuelve objeto/array o null
+            if (!$user) {
+                ResponseHelper::error("No se encontró el usuario con id $id. O ya fue eliminado", 404);
+                return;
+            }
+
+            // 2) eliminar
             $deleted = $this->service->deleteUser($id);
+
             if ($deleted) {
                 ResponseHelper::success("El usuario con id $id fue eliminado correctamente.", 200);
             } else {
-                ResponseHelper::error("No se encontró el usuario con id $id.", 404);
+                // carrera: otro proceso lo borró entre el check y el delete
+                ResponseHelper::error("El usuario con id $id ya no existe o no pudo eliminarse.", 409);
             }
         } catch (Throwable $e) {
             ResponseHelper::serverError(($this->messages['SERVER_ERROR'] ?? 'Server Error: ') . $e->getMessage(), 500);
         }
     }
+
 
     /**
      * POST /users

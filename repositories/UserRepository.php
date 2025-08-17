@@ -83,7 +83,8 @@ final class UserRepository
     {
         return $this->tx->transactional(function () use ($id) {
             $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = :id");
-            return $stmt->execute([':id' => $id]);
+            $stmt->execute([':id' => $id]);
+            return $stmt->rowCount() > 0; // 👈 verdadero solo si borró filas
         });
     }
 
