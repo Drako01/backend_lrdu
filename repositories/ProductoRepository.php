@@ -61,7 +61,7 @@ final class ProductoRepository implements ProductoRepositoryInterface
             ':modelo'            => $entity->getModelo(),
             ':caracteristicas'   => $entity->getCaracteristicas(),
             ':codigo_interno'    => $entity->getCodigoInterno(),
-            ':imagen_principal'  => $entity->getImagenPrincipal(),
+            ':imagen_principal'  => $entity->getImagenesAsJson(),
             ':favorito'          => $entity->isFavorito() ? 1 : 0,
             ':activo'            => $entity->isActivo() ? 1 : 0,
         ]);
@@ -102,7 +102,7 @@ final class ProductoRepository implements ProductoRepositoryInterface
             ':modelo'           => $entity->getModelo(),
             ':caracteristicas'  => $entity->getCaracteristicas(),
             ':codigo_interno'   => $entity->getCodigoInterno(),
-            ':imagen_principal' => $entity->getImagenPrincipal(),
+            ':imagen_principal' => $entity->getImagenesAsJson(),
             ':favorito'         => $entity->isFavorito() ? 1 : 0,
             ':activo'           => $entity->isActivo() ? 1 : 0,
         ]);

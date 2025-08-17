@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -63,8 +64,12 @@ final class ProductoService
         if (isset($data['caracteristicas']))   $p->setCaracteristicas($data['caracteristicas'] !== null ? (string)$data['caracteristicas'] : null);
         if (isset($data['codigo_interno']))    $p->setCodigoInterno($data['codigo_interno'] !== null ? (string)$data['codigo_interno'] : null);
         if (isset($data['codigoInterno']))     $p->setCodigoInterno($data['codigoInterno'] !== null ? (string)$data['codigoInterno'] : null);
-        if (isset($data['imagen_principal']))  $p->setImagenPrincipal($data['imagen_principal'] !== null ? (string)$data['imagen_principal'] : null);
-        if (isset($data['imagenPrincipal']))   $p->setImagenPrincipal($data['imagenPrincipal'] !== null ? (string)$data['imagenPrincipal'] : null);
+        if (array_key_exists('imagen_principal', $data)) {
+            $p->setImagenPrincipal($data['imagen_principal']); // array|string|null
+        }
+        if (array_key_exists('imagenPrincipal', $data)) {
+            $p->setImagenPrincipal($data['imagenPrincipal']);  // array|string|null
+        }
         if (array_key_exists('favorito', $data)) $p->setFavorito((bool)$data['favorito']);
         if (array_key_exists('activo', $data))   $p->setActivo((bool)$data['activo']);
 
