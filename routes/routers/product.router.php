@@ -36,7 +36,8 @@ class ProductsRouter
         switch ($method) {
             case 'GET':
                 if ($path === '/all-products') {
-                    $this->controller->getAll(); return;
+                    $this->controller->getAll($params);
+                    return;
                 }
                 if (preg_match('#^/product-by-id/(\d+)/?$#', $path, $m)) { // 👈 /?$
                     $id = (int)$m[1];
@@ -44,12 +45,16 @@ class ProductsRouter
                         ResponseHelper::respondWithError(['El ID debe ser un entero positivo.'], 400);
                         return; // 👈 cortar
                     }
-                    $this->controller->getById($id); return;
+                    $this->controller->getById($id);
+                    return;
                 }
                 break;
 
             case 'POST':
-                if ($path === '/products') { $this->controller->create($params); return; }
+                if ($path === '/products') {
+                    $this->controller->create($params);
+                    return;
+                }
                 break;
 
             case 'PUT':
@@ -59,7 +64,8 @@ class ProductsRouter
                         ResponseHelper::respondWithError(['El ID debe ser un entero positivo.'], 400);
                         return;
                     }
-                    $this->controller->update($id, $params); return;
+                    $this->controller->update($id, $params);
+                    return;
                 }
                 break;
 
@@ -70,7 +76,8 @@ class ProductsRouter
                         ResponseHelper::respondWithError(['El ID debe ser un entero positivo.'], 400);
                         return;
                     }
-                    $this->controller->delete($id); return;
+                    $this->controller->delete($id);
+                    return;
                 }
                 break;
         }

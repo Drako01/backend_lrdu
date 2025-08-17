@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -37,6 +38,79 @@ final class ProductoRepository implements ProductoRepositoryInterface
             $out[] = $this->hydrate($row);
         }
         return $out;
+    }
+
+    public function findAllPaginated(array $q): array
+    {
+        $where  = [];
+        $params = [];
+
+        if (!empty($q['category'])) {
+            $where[] = 'id_categoria = :cat';
+            $params[':cat'] = (int)$q['category'];
+        }
+        if (!empty($q['search'])) {
+            $where[] = '(LOWER(nombre) LIKE :search OR LOWER(descripcion) LIKE :search)';
+            $params[':search'] = '%' . mb_strtolower($q['search'], 'UTF-8') . '%';
+        }
+        if ($q['min_price'] !== null) {
+            $where[] = 'precio >= :minp';
+            $params[':minp'] = (float)$q['min_price'];
+        }
+        if ($q['max_price'] !== null) {
+            $where[] = 'precio <= :maxp';
+            $params[':maxp'] = (float)$q['max_price'];
+        }
+        if ($q['in_stock'] !== null) {
+            $where[] = $q['in_stock'] ? 'stock > 0' : 'stock = 0';
+        }
+        if (!empty($q['brand'])) {
+            $where[] = 'marca = :brand';
+            $params[':brand'] = (string)$q['brand'];
+        }
+        if (!empty($q['model'])) {
+            $where[] = 'modelo = :model';
+            $params[':model'] = (string)$q['model'];
+        }
+
+        $allowedSort = ['fecha_creacion', 'precio', 'id_producto', 'nombre'];
+        $sortBy  = in_array(($q['sort_by'] ?? 'fecha_creacion'), $allowedSort, true)
+            ? $q['sort_by'] : 'fecha_creacion';
+        $sortDir = (strtoupper($q['sort_dir'] ?? 'DESC') === 'ASC') ? 'ASC' : 'DESC';
+
+        $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        // 1) total (si querés ahorrar una query cuando no hay paginado, podés omitirlo y usar count($items))
+        $countSql = "SELECT COUNT(*) FROM productos $whereSql";
+        $stCount = $this->pdo->prepare($countSql);
+        $stCount->execute($params);
+        $total = (int)$stCount->fetchColumn();
+
+        // 2) página / o todo si no hay límite
+        $doLimit = isset($q['limit']) && $q['limit'] !== null;
+        $limitClause = $doLimit ? ' LIMIT :limit OFFSET :offset' : '';
+
+        $sql = "SELECT * FROM productos
+                $whereSql
+                ORDER BY $sortBy $sortDir, id_producto DESC
+                $limitClause";
+
+        $st = $this->pdo->prepare($sql);
+        foreach ($params as $k => $v) {
+            $st->bindValue($k, $v);
+        }
+        if ($doLimit) {
+            $st->bindValue(':limit',  (int)$q['limit'],  PDO::PARAM_INT);
+            $st->bindValue(':offset', (int)($q['offset'] ?? 0), PDO::PARAM_INT);
+        }
+        $st->execute();
+
+        $items = [];
+        while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+            $items[] = $this->hydrate($row);
+        }
+
+        return ['items' => $items, 'total' => $total];
     }
 
     public function save(object $entity): void

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -39,11 +40,77 @@ final class ProductoController
     }
 
     /** GET /productos */
-    public function getAll(): void
+    public function getAll(?array $query = []): void
     {
         try {
-            $list = $this->service->getAll();
-            $payload = array_map(fn(Producto $p) => $p->toArray(), $list);
+            // Toggle de paginación
+            $perPageRaw = $query['per_page'] ?? 20;
+            $paginationEnabled = true;
+
+            if ($perPageRaw === 'all' || (int)$perPageRaw === 0) {
+                $paginationEnabled = false;
+                $perPage = null;
+                $page    = 1;
+                $offset  = null;
+            } else {
+                $perPage = max(1, min((int)$perPageRaw, 100));
+                $page    = max(1, (int)($query['page'] ?? 1));
+                $offset  = ($page - 1) * $perPage;
+            }
+
+            $allowedSort = ['fecha_creacion', 'precio', 'id_producto', 'nombre'];
+            $sortBy  = $query['sort_by'] ?? 'fecha_creacion';
+            if (!in_array($sortBy, $allowedSort, true)) $sortBy = 'fecha_creacion';
+
+            $sortDir = strtoupper($query['sort_dir'] ?? 'DESC');
+            $sortDir = $sortDir === 'ASC' ? 'ASC' : 'DESC';
+
+            $filters = [
+                'category'  => isset($query['category']) ? (int)$query['category'] : null,
+                'search'    => isset($query['search']) ? trim((string)$query['search']) : null,
+                'min_price' => isset($query['min_price']) ? (float)$query['min_price'] : null,
+                'max_price' => isset($query['max_price']) ? (float)$query['max_price'] : null,
+                'in_stock'  => array_key_exists('in_stock', $query)
+                    ? filter_var($query['in_stock'], FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE)
+                    : null,
+                'brand'     => isset($query['brand']) ? trim((string)$query['brand']) : null,
+                'model'     => isset($query['model']) ? trim((string)$query['model']) : null,
+
+                'sort_by'   => $sortBy,
+                'sort_dir'  => $sortDir,
+
+                // paginación (pueden ser null si viene "all")
+                'limit'     => $perPage,
+                'offset'    => $offset,
+            ];
+
+            // ['items'=>Producto[], 'total'=>int]
+            $result = $this->service->getAll($filters);
+
+            $items = array_map(fn(Producto $p) => $p->toArray(), $result['items'] ?? []);
+            $total = (int)($result['total'] ?? count($items));
+
+            $payload = [
+                'items' => $items,
+                'pagination' => [
+                    'page'        => $paginationEnabled ? $page : 1,
+                    'per_page'    => $paginationEnabled ? $perPage : 'all',
+                    'total'       => $total,
+                    'total_pages' => $paginationEnabled ? (int)max(1, ceil($total / $perPage)) : 1,
+                ],
+                'filters_applied' => array_filter([
+                    'category'  => $filters['category'],
+                    'search'    => $filters['search'],
+                    'min_price' => $filters['min_price'],
+                    'max_price' => $filters['max_price'],
+                    'in_stock'  => $filters['in_stock'],
+                    'brand'     => $filters['brand'],
+                    'model'     => $filters['model'],
+                    'sort_by'   => $filters['sort_by'],
+                    'sort_dir'  => $filters['sort_dir'],
+                ], fn($v) => $v !== null && $v !== ''),
+            ];
+
             ResponseHelper::success($payload, 200, 'productos');
         } catch (Throwable $e) {
             ResponseHelper::serverError(($this->messages['SERVER_ERROR'] ?? 'Error: ') . $e->getMessage(), 500);

@@ -120,10 +120,14 @@ class MainRouter
         }
         try {
             switch ($method) {
-                case 'POST':   return $this->handlePost($path, $params);
-                case 'GET':    return $this->handleGet($path);
-                case 'PUT':    return $this->handlePut($path, $params);
-                case 'DELETE': return $this->handleDelete($path);
+                case 'POST':
+                    return $this->handlePost($path, $params);
+                case 'GET':
+                    return $this->handleGet($path);
+                case 'PUT':
+                    return $this->handlePut($path, $params);
+                case 'DELETE':
+                    return $this->handleDelete($path);
                 default:
                     ResponseHelper::respondWithError(['Método no permitido.'], 405);
                     return;
@@ -196,10 +200,10 @@ class MainRouter
         }
 
         if ($this->productsRouter->handlesRoute($path)) {
-            return $this->productsRouter->productsRequest('GET', $path, null);
+            return $this->productsRouter->productsRequest('GET', $path, $queryParams);
         }
         if ($this->categoryRouter->handlesRoute($path)) {
-            return $this->categoryRouter->categoriesRequest('GET', $path, null);
+            return $this->categoryRouter->categoriesRequest('GET', $path, $queryParams);
         }
 
         ResponseHelper::respondWithError(['Ruta no encontrada.'], 404);

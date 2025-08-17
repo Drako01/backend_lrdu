@@ -36,9 +36,9 @@ final class ProductoService
     }
 
     /** @return Producto[] */
-    public function getAll(): array
+    public function getAll(array $filters): array
     {
-        return $this->repo->findAll();
+        return $this->repo->findAllPaginated($filters); // ['items'=>[], 'total'=>int]
     }
 
     public function getById(int $id): ?Producto
