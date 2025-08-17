@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -29,11 +30,6 @@ final class UserController
     {
         try {
             $users = $this->service->getAllUsers(); // array<User>
-            // Excluir ADMIN y DEV
-            $filtered = array_filter($users, function ($u) {
-                $role = $u->getRole();
-                return !in_array($role->value, ['ADMIN_ROLE', 'DEV_ROLE'], true);
-            });
 
             $result = array_map(function ($u) {
                 return [
@@ -47,13 +43,14 @@ final class UserController
                     'disconnected_at' => $u->getDisconnectedAt(),
                     'created_at'      => $u->getCreatedAt(),
                 ];
-            }, $filtered);
+            }, $users);
 
             ResponseHelper::success(array_values($result), 200, 'users');
         } catch (Throwable $e) {
             ResponseHelper::serverError(($this->messages['SERVER_ERROR'] ?? 'Server Error: ') . $e->getMessage(), 500);
         }
     }
+
 
     /**
      * GET /users/{id}
@@ -118,6 +115,42 @@ final class UserController
             }
         } catch (Throwable $e) {
             ResponseHelper::serverError(($this->messages['SERVER_ERROR'] ?? 'Server Error: ') . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * POST /users
+     * Crea un usuario (solo ADMIN o SUPERADMIN).
+     *
+     * @param array $data       body JSON con email, password, first_name?, last_name?, role?
+     * @param mixed $actorRole  rol del actor (Role|string|int) tomado del middleware/JWT
+     */
+    public function createUser(array $data): void
+    {
+        try {
+            $newId = $this->service->createUser($data);
+            $user  = $this->service->getUserById($newId);
+
+            if (!$user) {
+                // debería existir; fallback defensivo
+                ResponseHelper::success(['id' => $newId], 201, 'user');
+                return;
+            }
+
+            $payload = [
+                'id'         => $user->getId(),
+                'first_name' => $user->getFirstName(),
+                'last_name'  => $user->getLastName(),
+                'email'      => $user->getEmail(),
+                'role'       => $user->getRole()->getDisplayName(),
+                'role_value' => $user->getRole()->value,
+                'created_at' => $user->getCreatedAt(),
+            ];
+            ResponseHelper::success($payload, 201, 'user');
+        } catch (InvalidArgumentException $e) {
+            ResponseHelper::error($e->getMessage(), 400);
+        } catch (Throwable $e) {
+            ResponseHelper::serverError('Error del servidor: ' . $e->getMessage(), 500);
         }
     }
 }

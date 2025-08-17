@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -141,5 +142,71 @@ final class UserService
             }
         }
         return null;
+    }
+
+    /**
+     * Crea un usuario nuevo.
+     * Reglas:
+     * - Solo ADMIN o SUPERADMIN pueden crear.
+     * - ADMIN no puede crear ADMIN ni SUPERADMIN.
+     *
+     * $data requiere:
+     *  - email (string, válido)
+     *  - password (string, >=8)
+     *  - first_name? / last_name? (válidos si vienen)
+     *  - role? (acepta value/name/displayName/number). Default CLIENT.
+     *
+     * @param array $data
+     * @param mixed $actorRole  (Role|string|int) desde JWT/sesión
+     * @return int id del nuevo usuario
+     * @throws InvalidArgumentException
+     * @throws RuntimeException (cuando el repo informa un problema genérico)
+     */
+    public function createUser(array $data): int
+    {
+        // 2) Validar credenciales mínimas
+        $email = isset($data['email']) ? trim((string)$data['email']) : '';
+        $pwd   = isset($data['password']) ? (string)$data['password'] : '';
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidArgumentException('Formato de email inválido.');
+        }
+        if (strlen($pwd) < 8) {
+            throw new InvalidArgumentException('La contraseña debe tener al menos 8 caracteres.');
+        }
+
+        // 3) Validar nombres si vinieron
+        if (isset($data['first_name']) && !User::validateName((string)$data['first_name'])) {
+            throw new InvalidArgumentException('first_name inválido.');
+        }
+        if (isset($data['last_name']) && !User::validateName((string)$data['last_name'])) {
+            throw new InvalidArgumentException('last_name inválido.');
+        }
+
+        // 4) Rol destino (default CLIENT) + política de escalamiento
+        $targetRole = isset($data['role']) ? $this->resolveRole($data['role']) : Role::CLIENT;
+        if (!$targetRole) {
+            throw new InvalidArgumentException('Rol inválido.');
+        }
+
+        // 5) Preparar payload para el repo (hash en capa de negocio, OK)
+        $insert = [
+            'email'           => $email,
+            'password'        => password_hash($pwd, PASSWORD_BCRYPT),
+            'first_name'      => isset($data['first_name']) ? trim((string)$data['first_name']) : null,
+            'last_name'       => isset($data['last_name']) ? trim((string)$data['last_name']) : null,
+            'role'            => $targetRole->value,
+            'token'           => null,
+            'connected_at'    => null,
+            'disconnected_at' => null,
+            'created_at'      => date('Y-m-d H:i:s'),
+        ];
+
+        // 6) Persistencia delegada 100% al repo
+        //    El repo:
+        //      - Inserta
+        //      - Detecta UNIQUE(email)
+        //      - Retorna id
+        return $this->repository->createUser($insert);
     }
 }

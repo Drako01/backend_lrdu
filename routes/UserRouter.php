@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -6,6 +7,7 @@ require_once __DIR__ . '/../controllers/UserController.php';
 require_once __DIR__ . '/../helpers/ResponseHelper.php';
 require_once __DIR__ . '/../middlewares/auth.middleware.php';
 require_once __DIR__ . '/../enums/roles.enum.php';
+require_once __DIR__ . '/../security/jwt.security.php';
 #endregion
 
 /**
@@ -50,8 +52,7 @@ final class UserRouter
                     $this->handleGet($path);
                     break;
                 case 'POST':
-                    // No hay create en UserController (CRUD aquí es RUD).
-                    ResponseHelper::respondWithError(['Método no permitido en esta ruta.'], 405);
+                    $this->handlePost($path);
                     break;
                 case 'PUT':
                     $this->handlePut($path, $params);
@@ -68,7 +69,40 @@ final class UserRouter
     }
 
     /* ==========================
-       GET
+        POST
+       ========================== */
+    private function handlePost(string $path): void
+    {
+        // POST /users  -> createUser
+        if ($path === '/users') {
+            if (($_SERVER['CONTENT_TYPE'] ?? '') !== 'application/json') {
+                ResponseHelper::respondWithError(['Content-Type debe ser application/json'], 415);
+                return;
+            }
+
+            // Solo SUPERADMIN y ADMIN pueden crear
+            $this->authMiddleware->requireManySpecificRoles(
+                [Role::SUPERADMIN->value, Role::ADMIN->value],
+                null,
+                null,
+                function () {
+                    $body = $this->getJsonBody();
+                    if ($body === null) {
+                        ResponseHelper::respondWithError(['Body JSON inválido.'], 400);
+                        return;
+                    }
+                    // Ejecuta el caso de uso
+                    $this->userController->createUser($body);
+                }
+            );
+            return;
+        }
+
+        ResponseHelper::respondWithError(['Ruta no encontrada.'], 404);
+    }
+
+    /* ==========================
+        GET
        ========================== */
 
     private function handleGet(string $path): void
@@ -96,12 +130,14 @@ final class UserRouter
         // GET /users
         if ($path === '/users') {
             // Todos los roles menos CLIENT listan
-            $allowedRoles = array_map(fn($role) => $role->value, Role::getRoles());
-            $excludeRoles = [Role::CLIENT->value];
-
-            $this->authMiddleware->authorizeExcludingRoles(
-                $allowedRoles,
-                $excludeRoles,
+            $this->authMiddleware->requireManySpecificRoles(
+                [
+                    Role::SUPERADMIN->value,
+                    Role::ADMIN->value,
+                    Role::DEV->value
+                ],
+                null,
+                null,
                 function () {
                     $this->userController->getAllUsers();
                 }
@@ -113,7 +149,7 @@ final class UserRouter
     }
 
     /* ==========================
-       PUT
+        PUT
        ========================== */
 
     private function handlePut(string $path, array $params): void
@@ -146,7 +182,7 @@ final class UserRouter
     }
 
     /* ==========================
-       DELETE
+        DELETE
        ========================== */
 
     private function handleDelete(string $path): void
@@ -171,7 +207,7 @@ final class UserRouter
     }
 
     /* ==========================
-       Helpers
+        Helpers
        ========================== */
 
     private function validateIntId(string $id): int
@@ -182,5 +218,16 @@ final class UserRouter
         ResponseHelper::respondWithError(['El ID debe ser un número entero positivo.'], 400);
         // por si ResponseHelper no sale del flujo:
         throw new InvalidArgumentException('ID inválido');
+    }
+
+    /** Lee y decodifica el body JSON; retorna array o null si falla */
+    private function getJsonBody(): ?array
+    {
+        $raw = file_get_contents('php://input') ?: '';
+        $data = json_decode($raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+            return null;
+        }
+        return $data;
     }
 }
