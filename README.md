@@ -18,7 +18,7 @@ Backend en PHP 8 + MySQL con ruteo propio, JWT auth y RBAC. Incluye endpoints p�
 
 ## Estructura (alto nivel)
 
-```
+```bash
 /api
   index.php                 # Front controller
   /routers
@@ -57,7 +57,7 @@ composer install    # si usás Composer para libs (opcional)
 
 ### `.env` (ejemplo)
 
-```
+```apache
 APP_ENV=local
 APP_DEBUG=true
 
@@ -361,7 +361,7 @@ curl -s -X DELETE https://backend.tu-dominio.com/api/users/6 \
 
 ## Licencia
 
- Apache License (LICENCE)[LICENCE].
+Este proyecto está bajo la [Apache License 2.0](LICENCE)
 
 ---
 
