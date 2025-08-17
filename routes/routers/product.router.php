@@ -18,9 +18,11 @@ class ProductsRouter
     /** Declara qué paths maneja este subrouter (relativos al basePath del MainRouter) */
     public function handlesRoute(string $path): bool
     {
-        // Soporta: /productos, /productos/{id}
-        if ($path === '/productos') return true;
-        return (bool)preg_match('#^/productos/(\d+)$#', $path);
+        if ($path === '/all-products') return true;
+        if (preg_match('#^/product-by-id/(\d+)/?$#', $path)) return true;
+        if ($path === '/products') return true;
+        if (preg_match('#^/products/(\d+)/?$#', $path)) return true;
+        return false;
     }
 
     /**
@@ -33,50 +35,45 @@ class ProductsRouter
     {
         switch ($method) {
             case 'GET':
-                if ($path === '/productos') {
-                    $this->controller->getAll();
-                    return;
+                if ($path === '/all-products') {
+                    $this->controller->getAll(); return;
                 }
-                if (preg_match('#^/productos/(\d+)$#', $path, $m)) {
+                if (preg_match('#^/product-by-id/(\d+)/?$#', $path, $m)) { // 👈 /?$
                     $id = (int)$m[1];
                     if ($id <= 0) {
                         ResponseHelper::respondWithError(['El ID debe ser un entero positivo.'], 400);
+                        return; // 👈 cortar
                     }
-                    $this->controller->getById($id);
-                    return;
+                    $this->controller->getById($id); return;
                 }
                 break;
 
             case 'POST':
-                if ($path === '/productos') {
-                    $this->controller->create($params);
-                    return;
-                }
+                if ($path === '/products') { $this->controller->create($params); return; }
                 break;
 
             case 'PUT':
-                if (preg_match('#^/productos/(\d+)$#', $path, $m)) {
+                if (preg_match('#^/products/(\d+)/?$#', $path, $m)) {
                     $id = (int)$m[1];
                     if ($id <= 0) {
                         ResponseHelper::respondWithError(['El ID debe ser un entero positivo.'], 400);
+                        return;
                     }
-                    $this->controller->update($id, $params);
-                    return;
+                    $this->controller->update($id, $params); return;
                 }
                 break;
 
             case 'DELETE':
-                if (preg_match('#^/productos/(\d+)$#', $path, $m)) {
+                if (preg_match('#^/products/(\d+)/?$#', $path, $m)) {
                     $id = (int)$m[1];
                     if ($id <= 0) {
                         ResponseHelper::respondWithError(['El ID debe ser un entero positivo.'], 400);
+                        return;
                     }
-                    $this->controller->delete($id);
-                    return;
+                    $this->controller->delete($id); return;
                 }
                 break;
         }
-
         ResponseHelper::respondWithError('Ruta ' . $path . ' no encontrada.', 404);
     }
 }

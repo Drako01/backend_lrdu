@@ -55,6 +55,33 @@ class MainRouter
 
     #endregion
 
+    private function isPublicPath(string $method, string $path): bool
+    {
+        // Mapear por método para no abrir más de la cuenta
+        $publicByMethod = [
+            'GET' => [
+                '#^/activate$#',
+                '#^/reset-password-email$#',
+                '#^/all-products/?$#',
+                '#^/product-by-id/\d+/?$#',
+                '#^/all-categories/?$#',
+                '#^/category-by-id/\d+/?$#',
+            ],
+            'POST' => [
+                '#^/register$#',
+                '#^/login$#',
+            ],
+        ];
+
+        if (!isset($publicByMethod[$method])) return false;
+
+        foreach ($publicByMethod[$method] as $re) {
+            if (preg_match($re, $path)) return true;
+        }
+        return false;
+    }
+
+
     #region Método Principal handleRequest
     /**
      * Manejar la solicitud
@@ -75,49 +102,36 @@ class MainRouter
     {
         $path = strtok($path, '?');
         $basePath = '/auth';
+
         if (strpos($path, $basePath) !== 0) {
-            ResponseHelper::respondWithError(
-                'Ruta no encontrada.',
-                404
-            );
+            ResponseHelper::respondWithError('Ruta no encontrada.', 404);
+            return; // 👈 cortar acá por las dudas
         }
 
         $path = substr($path, strlen($basePath));
 
-        $excludedPaths = [
-            '/register',
-            '/login',
-            '/activate',
-            '/reset-password-email',
-        ];
-
-        $isPublic = in_array($path, $excludedPaths, true);
+        // Seguridad: solo GET sin auth para públicos
+        $isPublic = $this->isPublicPath($method, $path);
         if (!$isPublic) {
             $this->authMiddleware->isAuthenticated(null, null, function () {
                 $allowedRoles = array_map(fn($role) => $role->value, Role::getRoles());
                 $this->authMiddleware->authorize($allowedRoles, null, null, function () {});
             });
         }
-
         try {
             switch ($method) {
-                case 'POST':
-                    return $this->handlePost($path, $params);
-                case 'GET':
-                    return $this->handleGet($path);
-                case 'PUT':         // <-- NUEVO
-                    return $this->handlePut($path, $params);
-                case 'DELETE':      // <-- NUEVO
-                    return $this->handleDelete($path);
+                case 'POST':   return $this->handlePost($path, $params);
+                case 'GET':    return $this->handleGet($path);
+                case 'PUT':    return $this->handlePut($path, $params);
+                case 'DELETE': return $this->handleDelete($path);
                 default:
                     ResponseHelper::respondWithError(['Método no permitido.'], 405);
+                    return;
             }
         } catch (Exception $e) {
             ResponseHelper::respondWithError($e->getMessage(), 500);
+            return;
         }
-
-
-        exit;
     }
 
     #endregion
@@ -165,10 +179,10 @@ class MainRouter
         $queryString = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
         parse_str($queryString, $queryParams);
 
-        // Endpoints propios de Auth que ya tenías
         if ($path === '/activate') {
             if (!isset($queryParams['token'])) {
                 ResponseHelper::respondWithError(['El token es requerido.'], 400);
+                return; // 👈 cortar
             }
             return $this->authController->activateUser($queryParams['token']);
         }
@@ -176,11 +190,11 @@ class MainRouter
         if ($path === '/reset-password-email') {
             if (!isset($queryParams['email'])) {
                 ResponseHelper::respondWithError(['El email es requerido.'], 400);
+                return; // 👈 cortar
             }
             return $this->authController->recoveryPassword($queryParams['email']);
         }
 
-        // ↓↓↓ Delegación a subrouters (ahora sí se ejecuta antes del 404)
         if ($this->productsRouter->handlesRoute($path)) {
             return $this->productsRouter->productsRequest('GET', $path, null);
         }
@@ -188,7 +202,6 @@ class MainRouter
             return $this->categoryRouter->categoriesRequest('GET', $path, null);
         }
 
-        // Nada matcheó
         ResponseHelper::respondWithError(['Ruta no encontrada.'], 404);
     }
 
