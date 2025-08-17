@@ -361,7 +361,7 @@ curl -s -X DELETE https://backend.tu-dominio.com/api/users/6 \
 
 ## Licencia
 
-MIT (o la que definas para el repo).
+ Apache License (LICENCE)[LICENCE].
 
 ---
 
