@@ -67,3 +67,5 @@ CREATE TABLE IF NOT EXISTS productos (
   INDEX idx_productos_categoria (id_categoria),
   INDEX idx_productos_activo_fav (activo, favorito)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
