@@ -94,12 +94,19 @@ final class UserController
         try {
             $this->service->updateUser($id, $data);
             ResponseHelper::success("El usuario con id $id fue actualizado correctamente.", 200);
+        } catch (DomainException $e) {
+            ResponseHelper::error($e->getMessage(), 409);
         } catch (InvalidArgumentException $e) {
             ResponseHelper::error($e->getMessage(), 400);
         } catch (Throwable $e) {
+            if ($e instanceof PDOException && $e->getCode() === '23000') {
+                ResponseHelper::error('El email ya está en uso por otro usuario.', 409);
+                return;
+            }
             ResponseHelper::serverError("Error del servidor: " . $e->getMessage(), 500);
         }
     }
+
 
     /**
      * DELETE /users/{id}

@@ -70,7 +70,8 @@ final class UserRepository
         $params = [':id' => $id];
         foreach ($fields as $col => $val) {
             $sets[] = "$col = :$col";
-            $params[":$col"] = $val;
+            // evita rarezas de interpolación: concatena
+            $params[':' . $col] = $val;
         }
 
         $sql = "UPDATE users SET " . implode(', ', $sets) . " WHERE id = :id";
@@ -181,5 +182,13 @@ final class UserRepository
             disconnected_at: $row['disconnected_at'] ?? null,
             created_at: $row['created_at'] ?? null,
         );
+    }
+
+    public function emailExists(string $email, int $excludeId): bool
+    {
+        $sql = "SELECT 1 FROM users WHERE email = :email AND id <> :id LIMIT 1";
+        $st  = $this->pdo->prepare($sql);
+        $st->execute([':email' => $email, ':id' => $excludeId]);
+        return (bool)$st->fetchColumn();
     }
 }

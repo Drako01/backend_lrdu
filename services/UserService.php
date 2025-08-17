@@ -38,26 +38,39 @@ final class UserService
      */
     public function updateUser(int $id, array $data): void
     {
-        if ($id <= 0) {
-            throw new InvalidArgumentException("ID de usuario inválido.");
-        }
+        if ($id <= 0) throw new InvalidArgumentException("ID de usuario inválido.");
 
         $user = $this->repository->getUserById($id);
-        if (!$user) {
-            throw new InvalidArgumentException("Usuario no encontrado.");
-        }
+        if (!$user) throw new InvalidArgumentException("Usuario no encontrado.");
+
+        // Helper local para leer campos de $user (objeto o array)
+        $getField = function ($entity, string $field) {
+            if (is_array($entity)) {
+                return $entity[$field] ?? null;
+            }
+            if (is_object($entity)) {
+                // Propiedad pública
+                if (isset($entity->$field)) return $entity->$field;
+                // Getter estilo getEmail / getFirstName
+                $getter = 'get' . str_replace(' ', '', ucwords(str_replace('_', ' ', $field)));
+                if (method_exists($entity, $getter)) return $entity->$getter();
+            }
+            return null;
+        };
 
         $update = [];
 
-        // first_name / last_name (simples)
-        if (isset($data['first_name'])) {
+        // first_name
+        if (array_key_exists('first_name', $data)) {
             $val = trim((string)$data['first_name']);
             if ($val === '' || mb_strlen($val) > 50) {
                 throw new InvalidArgumentException('first_name inválido.');
             }
             $update['first_name'] = $val;
         }
-        if (isset($data['last_name'])) {
+
+        // last_name
+        if (array_key_exists('last_name', $data)) {
             $val = trim((string)$data['last_name']);
             if ($val === '' || mb_strlen($val) > 50) {
                 throw new InvalidArgumentException('last_name inválido.');
@@ -65,17 +78,25 @@ final class UserService
             $update['last_name'] = $val;
         }
 
-        // email
-        if (isset($data['email'])) {
+        // email (solo si viene y realmente cambia)
+        if (array_key_exists('email', $data)) {
             $email = trim((string)$data['email']);
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 throw new InvalidArgumentException('Formato de email inválido.');
             }
-            $update['email'] = $email;
+            $currentEmail = (string)($getField($user, 'email') ?? '');
+            if (strcasecmp($email, $currentEmail) !== 0) {
+                // ¿Existe en otro usuario?
+                if ($this->repository->emailExists($email, $id)) {
+                    throw new DomainException('El email ya está en uso por otro usuario.');
+                }
+                $update['email'] = $email;
+            }
+            // Si no cambió, no lo agregamos y evitamos 1062
         }
 
-        // password (hash sólo si viene)
-        if (isset($data['password'])) {
+        // password (hash solo si viene)
+        if (array_key_exists('password', $data)) {
             $pwd = (string)$data['password'];
             if (strlen($pwd) < 8) {
                 throw new InvalidArgumentException('La contraseña debe tener al menos 8 caracteres.');
@@ -83,28 +104,19 @@ final class UserService
             $update['password'] = password_hash($pwd, PASSWORD_BCRYPT);
         }
 
-        // role (acepta value, nombre enum, display number o display name)
-        if (isset($data['role'])) {
-            $roleInput = $data['role'];
+        // role o role_value
+        if (array_key_exists('role', $data) || array_key_exists('role_value', $data)) {
+            $roleInput = $data['role'] ?? $data['role_value'];
             $roleEnum  = $this->resolveRole($roleInput);
-            if (!$roleEnum) {
-                throw new InvalidArgumentException('Rol inválido.');
-            }
+            if (!$roleEnum) throw new InvalidArgumentException('Rol inválido.');
             $update['role'] = $roleEnum->value;
         }
 
-        // timestamps opcionales
-        if (isset($data['connected_at'])) {
-            $update['connected_at'] = (string)$data['connected_at']; // validar formato si querés
-        }
-        if (isset($data['disconnected_at'])) {
-            $update['disconnected_at'] = (string)$data['disconnected_at'];
-        }
+        // timestamps opcionales (si los usás)
+        if (array_key_exists('connected_at', $data))     $update['connected_at']    = (string)$data['connected_at'];
+        if (array_key_exists('disconnected_at', $data))  $update['disconnected_at'] = (string)$data['disconnected_at'];
 
-        if (empty($update)) {
-            // Nada por actualizar -> OK
-            return;
-        }
+        if (empty($update)) return; // Nada para actualizar
 
         $this->repository->updateUser($id, $update);
     }
