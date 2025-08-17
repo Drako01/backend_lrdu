@@ -164,10 +164,7 @@ final class UserRouter
                 [
                     Role::SUPERADMIN->value,
                     Role::ADMIN->value,
-                    Role::DEV->value,
-                    Role::SELLER->value,
-                    Role::SUPPORT->value,
-                    Role::CLIENT->value
+                    Role::DEV->value
                 ],
                 null,
                 null,
@@ -192,8 +189,11 @@ final class UserRouter
             $userId = $this->validateIntId($m[1]);
 
             // Sólo SUPERADMIN elimina
-            $this->authMiddleware->requireSpecificRole(
-                Role::SUPERADMIN->value,
+            $this->authMiddleware->requireManySpecificRoles(
+                [
+                    Role::SUPERADMIN->value,
+                    Role::ADMIN->value,
+                ],
                 null,
                 null,
                 function () use ($userId) {
