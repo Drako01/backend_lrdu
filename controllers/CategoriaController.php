@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -26,10 +27,24 @@ final class CategoriaController
             ResponseHelper::success($cat->toArray(), 201, 'categoria');
         } catch (InvalidArgumentException $e) {
             ResponseHelper::error($e->getMessage(), 400);
+        } catch (PDOException $e) {
+            // Fallback si entre el check y el insert aparece un duplicado
+            $driver = $e->errorInfo[1] ?? 0;
+            if ((int)$driver === 1062) {
+                // Intentamos extraer el valor duplicado para un mensaje más útil
+                if (preg_match("/Duplicate entry '([^']+)'/", $e->getMessage(), $m)) {
+                    ResponseHelper::error("La categoría '{$m[1]}' ya está en uso.", 400);
+                } else {
+                    ResponseHelper::error('La categoría ya está en uso.', 400);
+                }
+                return;
+            }
+            ResponseHelper::serverError(($this->messages['SERVER_ERROR'] ?? 'Error: ') . $e->getMessage(), 500);
         } catch (Throwable $e) {
             ResponseHelper::serverError(($this->messages['SERVER_ERROR'] ?? 'Error: ') . $e->getMessage(), 500);
         }
     }
+
 
     /** GET /categorias */
     public function getAll(): void
@@ -67,10 +82,22 @@ final class CategoriaController
             ResponseHelper::success("La categoría $id fue actualizada correctamente.", 200);
         } catch (InvalidArgumentException $e) {
             ResponseHelper::error($e->getMessage(), 400);
+        } catch (PDOException $e) {
+            $driver = $e->errorInfo[1] ?? 0;
+            if ((int)$driver === 1062) {
+                if (preg_match("/Duplicate entry '([^']+)'/", $e->getMessage(), $m)) {
+                    ResponseHelper::error("La categoría '{$m[1]}' ya está en uso.", 400);
+                } else {
+                    ResponseHelper::error('La categoría ya está en uso.', 400);
+                }
+                return;
+            }
+            ResponseHelper::serverError("Error del servidor: " . $e->getMessage(), 500);
         } catch (Throwable $e) {
             ResponseHelper::serverError("Error del servidor: " . $e->getMessage(), 500);
         }
     }
+
 
     /** DELETE /categorias/{id} */
     public function delete(int $id): void

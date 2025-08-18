@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -22,10 +23,16 @@ final class CategoriaService
             throw new InvalidArgumentException('El nombre de la categoría es requerido y debe tener hasta 150 caracteres.');
         }
 
+        // si ya existe -> 400
+        if ($this->repo->existsByNombre($nombre)) {
+            throw new InvalidArgumentException("La categoría '{$nombre}' ya está en uso.");
+        }
+
         $cat = new Categoria($nombre);
         $this->repo->save($cat);
         return $cat;
     }
+
 
     public function getAll(): array
     {
@@ -52,11 +59,19 @@ final class CategoriaService
             if ($nombre === '' || mb_strlen($nombre) > 150) {
                 throw new InvalidArgumentException('Nombre inválido.');
             }
-            $cat->setNombre($nombre);
+
+            // solo si realmente cambia (case-insensitive)
+            if (strcasecmp($nombre, $cat->getNombre()) !== 0) {
+                if ($this->repo->existsByNombre($nombre, $cat->getIdCat())) {
+                    throw new InvalidArgumentException("La categoría '{$nombre}' ya está en uso.");
+                }
+                $cat->setNombre($nombre);
+            }
         }
 
         $this->repo->update($cat);
     }
+
 
     public function delete(int $id): bool
     {

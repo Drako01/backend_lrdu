@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 #region Imports
@@ -72,5 +73,19 @@ final class CategoriaRepository implements CategoriaRepositoryInterface
         $c = new Categoria($row['nombre']);
         $c->setIdCat((int)$row['id_cat']);
         return $c;
+    }
+
+    public function existsByNombre(string $nombre, ?int $excludeId = null): bool
+    {
+        if ($excludeId !== null) {
+            $sql = 'SELECT 1 FROM categorias WHERE nombre = :nombre AND id_cat <> :id LIMIT 1';
+            $st  = $this->pdo->prepare($sql);
+            $st->execute([':nombre' => $nombre, ':id' => $excludeId]);
+        } else {
+            $sql = 'SELECT 1 FROM categorias WHERE nombre = :nombre LIMIT 1';
+            $st  = $this->pdo->prepare($sql);
+            $st->execute([':nombre' => $nombre]);
+        }
+        return (bool)$st->fetchColumn();
     }
 }
