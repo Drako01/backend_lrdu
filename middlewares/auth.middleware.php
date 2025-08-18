@@ -361,15 +361,15 @@ class AuthMiddleware
             }
 
             // ✅ Validación IP opcional (si tu token trae "ip")
-            if (!empty($decodedToken->ip)) {
-                $reqIp = $this->getRealClientIp();
-                if (trim((string)$decodedToken->ip) !== $reqIp) {
-                    $this->sendJsonResponse([
-                        'status'  => 'Error',
-                        'message' => 'Token inválido por IP.',
-                    ], 403);
-                }
-            }
+            // if (!empty($decodedToken->ip)) {
+            //     $reqIp = $this->getRealClientIp();
+            //     if (trim((string)$decodedToken->ip) !== $reqIp) {
+            //         $this->sendJsonResponse([
+            //             'status'  => 'Error',
+            //             'message' => 'Token inválido por IP.',
+            //         ], 403);
+            //     }
+            // }
 
             return ['id' => $user_id];
         } catch (\Throwable $e) {
