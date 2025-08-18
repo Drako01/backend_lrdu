@@ -16,11 +16,11 @@ final class Conexion
         try {
             $config  = include __DIR__ . '/validate.php';
 
-            $server  = $config['DB_SERVER']   ?? '127.0.0.1';
+            $server  = $config['DB_SERVER']   ?? 'localhost';
             $port    = (string)($config['DB_PORT'] ?? '3306');
-            $dbname  = $config['DB_NAME']     ?? 'lrdu';
-            $user    = $config['DB_USER']     ?? 'root';
-            $pass    = $config['DB_PASSWORD'] ?? '';
+            $dbname  = $config['DB_NAME']     ?? 'c2731607_lrdu';
+            $user    = $config['DB_USER']     ?? 'c2731607_lrdu';
+            $pass    = $config['DB_PASSWORD'] ?? 'MItuzo98wi';
             $charset = 'utf8mb4';
 
             $dsn = "mysql:host={$server};port={$port};dbname={$dbname};charset={$charset}";
@@ -32,7 +32,12 @@ final class Conexion
                 [
                     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_PERSISTENT         => true,
+
+                    // 👇 Cambios clave para matar el 1615
+                    PDO::ATTR_EMULATE_PREPARES   => true,   // usa prepareds del cliente (evita el bug del server)
+                    PDO::ATTR_PERSISTENT         => false,  // no uses conexiones persistentes
+
+                    // Podés dejar tu init command si lo usás
                     PDO::MYSQL_ATTR_INIT_COMMAND => "SET sql_mode='STRICT_ALL_TABLES'",
                 ]
             );
