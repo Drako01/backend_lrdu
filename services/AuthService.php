@@ -118,6 +118,7 @@ final class AuthService
 
         $roleEnum = Role::tryFrom((string)$user['role']) ?? Role::CLIENT;
         $roleLabel = $roleEnum->getDisplayName();
+        $roleNumber = $roleEnum->getDisplayNumber();
         $username  = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
 
         // Generar nuevo token
@@ -134,12 +135,13 @@ final class AuthService
         // Sesión PHP (minimal footprint)
         @session_start();
         $_SESSION['user'] = [
-            'id'        => (int)$user['id'],
-            'full_name' => $username,
-            'email'     => $user['email'],
-            'role'      => $roleLabel,
-            'role_value' => $roleEnum->value,
-            'token'     => $token,
+            'id'            => (int)$user['id'],
+            'full_name'     => $username,
+            'email'         => $user['email'],
+            'role'          => $roleLabel,
+            'role_number'   => $roleNumber,
+            'role_value'    => $roleEnum->value,
+            'token'         => $token,
         ];
 
         return [
