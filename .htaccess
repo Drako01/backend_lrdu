@@ -1,11 +1,14 @@
 # ==== Seguridad & compatibilidad
 Options -Indexes -MultiViews
 
-# ==== Hacer llegar Authorization a PHP (Apache/FPM/cPanel)
+# ==== Pasar Authorization a PHP (CGI/FPM)
 CGIPassAuth On
 SetEnvIfNoCase Authorization "^(.*)$" HTTP_AUTHORIZATION=$1
 
 RewriteEngine On
+
+# 🔒 Bloquear ejecución de scripts dentro de /multimedia (antes que nada)
+RewriteRule ^multimedia/.*\.(?:php|phtml|phar|cgi|pl|py)$ - [F,NC]
 
 # No reescribir si es archivo/carpeta real
 RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -15,6 +18,9 @@ RewriteRule ^ - [L]
 # Extra: si llega Authorization por header, exponerlo a PHP
 RewriteCond %{HTTP:Authorization} .
 RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Alias legible para el front
+RewriteRule ^auth/products/?$ productos [QSA,NC,L]
 
 # Front controller: todo a index.php
 RewriteRule ^ index.php [QSA,L]
@@ -34,10 +40,11 @@ RedirectMatch 404 ^/(?:vendor|tests|\.git|\.vscode)(/|$)
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType image/png "access plus 1 month"
-  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
   ExpiresByType image/webp "access plus 1 month"
-  ExpiresByType font/woff2 "access plus 1 year"
-  ExpiresByType font/woff  "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 month"
+  ExpiresByType video/mp4 "access plus 7 days"
+  ExpiresByType video/webm "access plus 7 days"
   ExpiresByType application/javascript "access plus 1 month"
   ExpiresByType text/css "access plus 1 month"
   ExpiresByType application/json "access plus 1 week"

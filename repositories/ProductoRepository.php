@@ -120,9 +120,9 @@ final class ProductoRepository implements ProductoRepositoryInterface
         }
 
         $sql = 'INSERT INTO productos
-            (nombre, descripcion, id_categoria, stock, precio, marca, modelo, caracteristicas, codigo_interno, imagen_principal, favorito, activo)
+            (nombre, descripcion, id_categoria, stock, precio, marca, modelo, caracteristicas, codigo_interno, imagen_principal, video_url, favorito, activo)
             VALUES
-            (:nombre, :descripcion, :id_categoria, :stock, :precio, :marca, :modelo, :caracteristicas, :codigo_interno, :imagen_principal, :favorito, :activo)';
+            (:nombre, :descripcion, :id_categoria, :stock, :precio, :marca, :modelo, :caracteristicas, :codigo_interno, :imagen_principal, :video_url, :favorito, :activo)';
 
         $st = $this->pdo->prepare($sql);
         $st->execute([
@@ -136,6 +136,7 @@ final class ProductoRepository implements ProductoRepositoryInterface
             ':caracteristicas'   => $entity->getCaracteristicas(),
             ':codigo_interno'    => $entity->getCodigoInterno(),
             ':imagen_principal'  => $entity->getImagenesAsJson(),
+            ':video_url'         => $entity->getVideoUrl(),
             ':favorito'          => $entity->isFavorito() ? 1 : 0,
             ':activo'            => $entity->isActivo() ? 1 : 0,
         ]);
@@ -160,6 +161,7 @@ final class ProductoRepository implements ProductoRepositoryInterface
             caracteristicas = :caracteristicas,
             codigo_interno = :codigo_interno,
             imagen_principal = :imagen_principal,
+            video_url = :video_url, 
             favorito = :favorito,
             activo = :activo
             WHERE id_producto = :id';
@@ -177,6 +179,7 @@ final class ProductoRepository implements ProductoRepositoryInterface
             ':caracteristicas'  => $entity->getCaracteristicas(),
             ':codigo_interno'   => $entity->getCodigoInterno(),
             ':imagen_principal' => $entity->getImagenesAsJson(),
+            ':video_url'        => $entity->getVideoUrl(),
             ':favorito'         => $entity->isFavorito() ? 1 : 0,
             ':activo'           => $entity->isActivo() ? 1 : 0,
         ]);

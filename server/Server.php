@@ -1,6 +1,11 @@
 <?php
 #region Imports
-require __DIR__ . '/../vendor/autoload.php';
+$autoload = __DIR__ . '/../vendor/autoload.php';
+if (is_file($autoload)) {
+    require $autoload;
+} else {
+    error_log('[bootstrap] vendor/autoload.php no encontrado (modo sin dependencias)');
+}
 require_once __DIR__ . '/../routes/UserRouter.php';
 require_once __DIR__ . '/../routes/MainRouter.php';
 require_once __DIR__ . '/../helpers/ResponseHelper.php';

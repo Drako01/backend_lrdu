@@ -70,6 +70,12 @@ final class ProductoService
         if (array_key_exists('imagenPrincipal', $data)) {
             $p->setImagenPrincipal($data['imagenPrincipal']);  // array|string|null
         }
+        if (array_key_exists('video_url', $data)) {
+            $p->setVideoUrl($data['video_url'] !== null ? (string)$data['video_url'] : null);
+        }
+        if (array_key_exists('videoUrl', $data)) {
+            $p->setVideoUrl($data['videoUrl'] !== null ? (string)$data['videoUrl'] : null);
+        }
         if (array_key_exists('favorito', $data)) $p->setFavorito((bool)$data['favorito']);
         if (array_key_exists('activo', $data))   $p->setActivo((bool)$data['activo']);
 
@@ -91,5 +97,36 @@ final class ProductoService
             throw new InvalidArgumentException("La categoría $idCat no existe.");
         }
         $p->setIdCategoria($idCat);
+    }
+
+    public function getCategoriaTag(int $idCat): string
+    {
+        $cat = $this->catRepo->findById($idCat);
+
+        if ($cat === null) {
+            return (string)$idCat;
+        }
+
+        // 1) Si es entidad con getter, usarlo
+        if (is_object($cat) && method_exists($cat, 'getNombre')) {
+            $name = (string)$cat->getNombre();
+            if ($name !== '') {
+                return $name;
+            }
+        }
+
+        // 2) Si es array (o ArrayAccess), usar 'nombre'
+        if (is_array($cat) && !empty($cat['nombre'])) {
+            return (string)$cat['nombre'];
+        }
+        if ($cat instanceof ArrayAccess && isset($cat['nombre'])) {
+            $name = (string)$cat['nombre'];
+            if ($name !== '') {
+                return $name;
+            }
+        }
+
+        // 3) Fallback: el ID como tag
+        return (string)$idCat;
     }
 }

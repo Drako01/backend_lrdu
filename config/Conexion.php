@@ -14,7 +14,7 @@ final class Conexion
     private function __construct()
     {
         try {
-            $config  = include __DIR__ . '/validate.php';
+            $config  = require_once __DIR__ . '/validate.php';
 
             $server  = $config['DB_SERVER']   ?? 'localhost';
             $port    = (string)($config['DB_PORT'] ?? '3306');

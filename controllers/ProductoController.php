@@ -4,31 +4,52 @@ declare(strict_types=1);
 
 #region Imports
 require_once __DIR__ . '/../services/ProductoService.php';
+require_once __DIR__ . '/../services/ProductMediaService.php';
 require_once __DIR__ . '/../helpers/ResponseHelper.php';
 #endregion
 
 final class ProductoController
 {
     private ProductoService $service;
+    private ProductMediaService $media;
     private array $messages;
 
-    public function __construct(?ProductoService $service = null)
+    public function __construct(?ProductoService $service = null, ?ProductMediaService $media = null)
     {
         $this->messages = require __DIR__ . '/../utils/messages.error.php';
         $this->service  = $service instanceof ProductoService ? $service : new ProductoService();
+        $this->media    = $media   instanceof ProductMediaService ? $media   : new ProductMediaService();
     }
 
     /** POST /productos */
     public function create(?array $params = null): void
     {
         try {
-            $data = $params ?? json_decode(file_get_contents('php://input'), true) ?? [];
+            $ct = $_SERVER['CONTENT_TYPE'] ?? ($_SERVER['HTTP_CONTENT_TYPE'] ?? '');
+            $isMultipart = (!empty($_FILES))
+                || (is_string($ct) && stripos($ct, 'multipart/form-data') !== false);
+
+
+            if ($isMultipart) {
+                $data = $_POST; // campos del producto
+                $files  = $_FILES;  
+                $nombre = (string)($data['nombre'] ?? '');
+                $idCat  = (int)($data['id_categoria'] ?? $data['idCategoria'] ?? 0);
+                $catTag = $idCat > 0 ? $this->service->getCategoriaTag($idCat) : 'general';
+
+                // Guarda media y mete URLs en $data
+                $media = $this->media->saveForProducto($files, $nombre, $catTag);
+                if (!empty($media['images'])) $data['imagen_principal'] = $media['images'];
+                if (!empty($media['video']))  $data['video_url']        = $media['video'];
+            } else {
+                $data = $params ?? json_decode(file_get_contents('php://input'), true) ?? [];
+            }
+
             $prod = $this->service->create($data);
             ResponseHelper::success($prod->toArray(), 201, 'producto');
         } catch (InvalidArgumentException $e) {
             ResponseHelper::error($e->getMessage(), 400);
         } catch (PDOException $e) {
-            // Unique / FK
             if ($e->getCode() === '23000') {
                 ResponseHelper::error('Violación de restricción (FK/Unique). ' . $e->getMessage(), 409);
             } else {
@@ -136,7 +157,33 @@ final class ProductoController
     public function update(int $id, mixed $data): void
     {
         try {
-            $arr = is_array($data) ? $data : (json_decode((string)$data, true) ?? []);
+            $ct = $_SERVER['CONTENT_TYPE'] ?? ($_SERVER['HTTP_CONTENT_TYPE'] ?? '');
+            $isMultipart = (stripos($ct, 'multipart/form-data') !== false) || !empty($_FILES);
+
+            if ($isMultipart) {
+                $arr = $_POST;
+                // si mandan nuevas imágenes/video, reemplazamos lo existente
+                $nombre = (string)($arr['nombre'] ?? '');
+                // si no mandan nombre en el form de update, intento leerlo del actual:
+                if ($nombre === '') {
+                    $actual = $this->service->getById($id);
+                    if ($actual) $nombre = $actual->getNombre();
+                }
+
+                $idCat = (int)($arr['id_categoria'] ?? $arr['idCategoria'] ?? 0);
+                if ($idCat <= 0) {
+                    $actual = $this->service->getById($id);
+                    if ($actual) $idCat = $actual->getIdCategoria();
+                }
+                $catTag = $idCat > 0 ? $this->service->getCategoriaTag($idCat) : 'general';
+
+                $media = $this->media->saveForProducto($_FILES, $nombre, $catTag);
+                if (!empty($media['images'])) $arr['imagen_principal'] = $media['images'];
+                if (!empty($media['video']))  $arr['video_url']        = $media['video'];
+            } else {
+                $arr = is_array($data) ? $data : (json_decode((string)$data, true) ?? []);
+            }
+
             $this->service->update($id, $arr);
             ResponseHelper::success("El producto $id fue actualizado correctamente.", 200);
         } catch (InvalidArgumentException $e) {

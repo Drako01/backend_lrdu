@@ -1,3 +1,9 @@
 {
-    "postman.settings.dotenv-detection-notification-visibility": false
+    "postman.settings.dotenv-detection-notification-visibility": false,
+    "markdownlint.ignore": [
+        "**/.htaccess"
+    ],
+    "markdownlint.config": {
+        "MD041": false
+    }
 }

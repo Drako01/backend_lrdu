@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require __DIR__ . '/panic_logger.php';
 
 /**
  * 1) Hacer visible el Authorization para PHP-FPM/Apache (cPanel suele ponerlo en REDIRECT_HTTP_AUTHORIZATION)

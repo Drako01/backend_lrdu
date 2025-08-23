@@ -1,0 +1,20 @@
+<?php
+declare(strict_types=1);
+ini_set('display_errors','1'); error_reporting(E_ALL);
+
+header('Content-Type: application/json; charset=utf-8');
+
+// Marcar HTTPS detrás de proxy/CDN
+if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $_SERVER['HTTPS'] = 'on';
+}
+if (!empty($_SERVER['HTTP_CF_VISITOR']) && stripos($_SERVER['HTTP_CF_VISITOR'], '"scheme":"https"') !== false) {
+    $_SERVER['HTTPS'] = 'on';
+}
+
+echo json_encode([
+  'status' => 'ok',
+  'php'    => PHP_VERSION,
+  'sapi'   => PHP_SAPI,
+  'time'   => date('c'),
+]);

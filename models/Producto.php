@@ -17,7 +17,7 @@ final class Producto implements JsonSerializable
 
     /** Máx 3 URLs http/https; siempre en memoria como array */
     private array $imagenes = [];
-
+    private ?string $videoUrl = null;
     private bool $favorito;
     private bool $activo;
     private ?string $fechaCreacion;
@@ -34,6 +34,7 @@ final class Producto implements JsonSerializable
         ?string $caracteristicas = null,
         ?string $codigoInterno = null,
         null|array|string $imagenes = null, // <- acepta array|string|null
+        ?string $videoUrl = null, 
         bool $favorito = false,
         bool $activo = true,
         ?string $fechaCreacion = null,
@@ -49,6 +50,7 @@ final class Producto implements JsonSerializable
         $this->caracteristicas = self::t($caracteristicas);
         $this->codigoInterno = self::t($codigoInterno);
         $this->setImagenes($imagenes); // normaliza a array (máx 3)
+        $this->setVideoUrl($videoUrl); 
         $this->favorito = $favorito;
         $this->activo = $activo;
         $this->fechaCreacion = self::t($fechaCreacion);
@@ -93,7 +95,10 @@ final class Producto implements JsonSerializable
     public function setCaracteristicas(?string $caracteristicas): void { $this->caracteristicas = self::t($caracteristicas); }
 
     public function getCodigoInterno(): ?string { return $this->codigoInterno; }
-    public function setCodigoInterno(?string $codigo): void { $this->codigoInterno = self::t($codigo); }
+    public function setCodigoInterno(?string $codigo): void {
+        $this->codigoInterno = self::optStr($codigo); // <- antes usaba self::t(...)
+    }
+
 
     /** Compatibilidad hacia atrás: permite string|array|null */
     public function setImagenPrincipal(null|array|string $value): void
@@ -124,6 +129,9 @@ final class Producto implements JsonSerializable
     {
         return $this->getImagenesAsJson();
     }
+
+    public function getVideoUrl(): ?string { return $this->videoUrl; }
+    public function setVideoUrl(?string $url): void { $this->videoUrl = self::optStr($url); }
 
     public function isFavorito(): bool { return $this->favorito; }
     public function setFavorito(bool $favorito): void { $this->favorito = $favorito; }
@@ -156,6 +164,7 @@ final class Producto implements JsonSerializable
             'caracteristicas'     => $this->caracteristicas,
             'codigo_interno'      => $this->codigoInterno,
             'imagen_principal'    => $this->getImagenes(), // <- siempre array
+            'video_url'           => $this->videoUrl,
             'favorito'            => $this->favorito,
             'activo'              => $this->activo,
             'fecha_creacion'      => $this->fechaCreacion,
@@ -193,6 +202,7 @@ final class Producto implements JsonSerializable
             caracteristicas:    self::optStr($get($data, 'caracteristicas', 'caracteristicas')),
             codigoInterno:      self::optStr($get($data, 'codigo_interno', 'codigoInterno')),
             imagenes:           $get($data, 'imagen_principal', 'imagenPrincipal'), // <- acepta array|string|null
+            videoUrl:           self::optStr($get($data, 'video_url', 'videoUrl')),
             favorito:           $favorito,
             activo:             $activo,
             fechaCreacion:      self::optStr($get($data, 'fecha_creacion', 'fechaCreacion')),

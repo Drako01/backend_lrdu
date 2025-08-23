@@ -1,0 +1,17 @@
+# /var/www/app/multimedia/.htaccess
+Options -Indexes -ExecCGI
+
+# Bloquear ejecución de scripts (case-insensitive)
+<FilesMatch "(?i)\.(php|phtml|phar|cgi|pl|py)$">
+  Require all denied
+</FilesMatch>
+
+# (Opcional) si existe mod_php, apagar el engine
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+
+# (Opcional) endurecer tipos
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>

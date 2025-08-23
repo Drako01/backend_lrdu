@@ -15,6 +15,7 @@ require_once __DIR__ . '/../helpers/verify.helper.php';
 require_once __DIR__ . '/routers/auth.router.php';
 require_once __DIR__ . '/routers/product.router.php';
 require_once __DIR__ . '/routers/category.router.php';
+require_once __DIR__ . '/routers/banners.router.php';
 #endregion
 /**
  * Enrutador MainRouter
@@ -39,6 +40,7 @@ class MainRouter
     private $authRouter;
     private $productsRouter;
     private $categoryRouter;
+    private $bannerRouter;
     private $authMiddleware;
     private $authController;
     #endregion
@@ -46,11 +48,12 @@ class MainRouter
     #region Constructor
     public function __construct()
     {
-        $this->authRouter = new AuthRouter();
-        $this->productsRouter = new ProductsRouter();
-        $this->categoryRouter = new CategoryRouter();
-        $this->authMiddleware = new AuthMiddleware();
-        $this->authController = new AuthController();
+        $this->authRouter       = new AuthRouter();
+        $this->productsRouter   = new ProductsRouter();
+        $this->categoryRouter   = new CategoryRouter();
+        $this->bannerRouter     = new BannersRouter();
+        $this->authMiddleware   = new AuthMiddleware();
+        $this->authController   = new AuthController();
     }
 
     #endregion
@@ -63,9 +66,11 @@ class MainRouter
                 '#^/activate$#',
                 '#^/reset-password-email$#',
                 '#^/all-products/?$#',
+                '#^/all-banners/?$#',
                 '#^/product-by-id/\d+/?$#',
                 '#^/all-categories/?$#',
                 '#^/category-by-id/\d+/?$#',
+                '#^/banner-by-id/\d+/?$#',
             ],
             'POST' => [
                 '#^/register$#',
@@ -126,6 +131,8 @@ class MainRouter
                     return $this->handleGet($path);
                 case 'PUT':
                     return $this->handlePut($path, $params);
+                    // case 'PATCH':
+                    //     return $this->handlePatch($path, $params);
                 case 'DELETE':
                     return $this->handleDelete($path);
                 default:
@@ -162,6 +169,10 @@ class MainRouter
         // Luego: Categorías
         if ($this->categoryRouter->handlesRoute($path)) {
             return $this->categoryRouter->categoriesRequest('POST', $path, $params);
+        }
+        // Luego: Banners
+        if ($this->bannerRouter->handlesRoute($path)) {
+            return $this->bannerRouter->bannersRequest('POST', $path, $params);
         }
 
         ResponseHelper::respondWithError('Ruta no encontrada: ' . $path, 404);
@@ -205,6 +216,9 @@ class MainRouter
         if ($this->categoryRouter->handlesRoute($path)) {
             return $this->categoryRouter->categoriesRequest('GET', $path, $queryParams);
         }
+        if ($this->bannerRouter->handlesRoute($path)) {
+            return $this->bannerRouter->bannersRequest('GET', $path, $queryParams);
+        }
 
         ResponseHelper::respondWithError(['Ruta no encontrada.'], 404);
     }
@@ -227,8 +241,28 @@ class MainRouter
         if ($this->categoryRouter->handlesRoute($path)) {
             return $this->categoryRouter->categoriesRequest('PUT', $path, $params);
         }
+        if ($this->bannerRouter->handlesRoute($path)) {
+            return $this->bannerRouter->bannersRequest('PUT', $path, $params);
+        }
+        if ($this->bannerRouter->handlesRoute($path)) {
+            return $this->bannerRouter->bannersRequest('PATCH', $path, $params);
+        }
         ResponseHelper::respondWithError('Ruta no encontrada: ' . $path, 404);
     }
+
+    // private function handlePatch($path, $params)
+    // {
+    //     // if ($this->productsRouter->handlesRoute($path)) {
+    //     //     return $this->productsRouter->productsRequest('PATCH', $path, $params);
+    //     // }
+    //     // if ($this->categoryRouter->handlesRoute($path)) {
+    //     //     return $this->categoryRouter->categoriesRequest('PATCH', $path, $params);
+    //     // }
+    //     if ($this->bannerRouter->handlesRoute($path)) {
+    //         return $this->bannerRouter->bannersRequest('PATCH', $path, $params);
+    //     }
+    //     ResponseHelper::respondWithError('Ruta no encontrada: ' . $path, 404);
+    // }
 
 
     /**
@@ -244,6 +278,9 @@ class MainRouter
         }
         if ($this->categoryRouter->handlesRoute($path)) {
             return $this->categoryRouter->categoriesRequest('DELETE', $path, null);
+        }
+        if ($this->bannerRouter->handlesRoute($path)) {
+            return $this->bannerRouter->bannersRequest('DELETE', $path, null);
         }
         ResponseHelper::respondWithError('Ruta no encontrada: ' . $path, 404);
     }
