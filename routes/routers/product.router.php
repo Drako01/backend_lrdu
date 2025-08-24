@@ -55,9 +55,7 @@ class ProductsRouter
                     $this->controller->create($params);
                     return;
                 }
-                break;
-
-            case 'PUT':
+                
                 if (preg_match('#^/products/(\d+)/?$#', $path, $m)) {
                     $id = (int)$m[1];
                     if ($id <= 0) {

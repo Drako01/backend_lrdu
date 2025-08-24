@@ -236,9 +236,9 @@ class MainRouter
     // PUT
     private function handlePut($path, $params)
     {
-        if ($this->productsRouter->handlesRoute($path)) {
-            return $this->productsRouter->productsRequest('PUT', $path, $params);
-        }
+        // if ($this->productsRouter->handlesRoute($path)) {
+        //     return $this->productsRouter->productsRequest('PUT', $path, $params);
+        // }
         if ($this->categoryRouter->handlesRoute($path)) {
             return $this->categoryRouter->categoriesRequest('PUT', $path, $params);
         }
