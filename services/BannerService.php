@@ -15,55 +15,53 @@ final class BannerService
         $this->repo = $repo ?? new BannerRepository();
     }
 
-    public function create(array $data): Banner
+    public static function validateBannerName(string $name): string
     {
-        $url = trim((string)($data['banner'] ?? ''));
-        if ($url === '') {
-            throw new InvalidArgumentException('Se requiere la URL del banner.');
+        $name = trim(strtolower($name));
+        if (!in_array($name, ['banner_top','banner_bottom'], true)) {
+            throw new InvalidArgumentException('slot/banner_name inválido (esperado: banner_top | banner_bottom)');
         }
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-            throw new InvalidArgumentException('URL de banner inválida.');
-        }
-
-        $b = Banner::fromArray(['banner' => $url]);
-        $this->repo->save($b);
-        return $b;
+        return $name;
     }
 
-    /** @return Banner[] */
-    public function getAll(): array
+    /** GET público */
+    public function get(?string $slot): array
     {
-        return $this->repo->findAll();
-    }
-
-    public function getById(int $id): ?Banner
-    {
-        if ($id <= 0) throw new InvalidArgumentException('ID inválido.');
-        return $this->repo->findById($id);
-    }
-
-    public function update(int $id, array $data): void
-    {
-        $b = $this->getById($id);
-        if (!$b) throw new InvalidArgumentException("Banner $id no encontrado.");
-
-        if (array_key_exists('banner', $data)) {
-            $url = $data['banner'];
-            if ($url !== null) {
-                $url = trim((string)$url);
-                if ($url === '' || !filter_var($url, FILTER_VALIDATE_URL)) {
-                    throw new InvalidArgumentException('URL de banner inválida.');
-                }
-                $b->setUrlBanner($url);
-            }
+        if ($slot) {
+            $slot = self::validateBannerName($slot);
+            $b = $this->repo->findByName($slot);
+            if (!$b) $b = new Banner($slot, null, false); // si no existiera (por si falta seed)
+            return ['banner' => $b->toArray()];
         }
 
-        $this->repo->update($b);
+        $items = $this->repo->findAll();
+        // garantizamos ambos slots
+        $map = array_column(array_map(fn($b)=>$b->toArray(), $items), null, 'banner_name');
+        foreach (['banner_top','banner_bottom'] as $slotName) {
+            if (!isset($map[$slotName])) $map[$slotName] = (new Banner($slotName, null, false))->toArray();
+        }
+        // orden estable
+        $out = [$map['banner_top'], $map['banner_bottom']];
+        return ['banners' => $out];
     }
 
-    public function delete(int $id): bool
+    /** POST admin */
+    public function update(string $bannerName, ?string $activeRaw, ?string $imageUrlFromUpload): Banner
     {
-        if ($id <= 0) throw new InvalidArgumentException('ID inválido.');
-        return $this->repo->delete($id);
+        $name = self::validateBannerName($bannerName);
+        $active = self::parseActive($activeRaw); // null si no vino, bool si vino
+        // upsert parcial
+        return $this->repo->upsert($name, $imageUrlFromUpload, $active);
+    }
+
+    private static function parseActive(?string $raw): ?bool
+    {
+        if ($raw === null) return null;
+        $val = strtolower(trim($raw));
+        if ($val === '1' || $val === 'true')  return true;
+        if ($val === '0' || $val === 'false') return false;
+        // si llega vacío, lo tratamos como null (no pisa)
+        if ($val === '') return null;
+        throw new InvalidArgumentException('active inválido (usar true/false o 1/0)');
     }
 }

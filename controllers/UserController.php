@@ -26,12 +26,19 @@ final class UserController
      * GET /users
      * Lista todos los usuarios (excluye ADMIN y DEV)
      */
-    public function getAllUsers(): void
+    public function getAllUsers(bool $includeSuperAdmins = false): void
     {
         try {
             $users = $this->service->getAllUsers(); // array<User>
 
-            $result = array_map(function ($u) {
+            $filtered = $includeSuperAdmins
+                ? $users
+                : array_filter($users, static fn($u) => (int)$u->getRole()->getDisplayNumber() !== 10);
+
+            // Reindex opcional (cosmético)
+            $filtered = array_values($filtered);
+
+            $result = array_map(static function ($u) {
                 return [
                     'id'              => $u->getId(),
                     'first_name'      => $u->getFirstName(),
@@ -43,13 +50,14 @@ final class UserController
                     'disconnected_at' => $u->getDisconnectedAt(),
                     'created_at'      => $u->getCreatedAt(),
                 ];
-            }, $users);
+            }, $filtered);
 
-            ResponseHelper::success(array_values($result), 200, 'users');
+            ResponseHelper::success($result, 200, 'users');
         } catch (Throwable $e) {
             ResponseHelper::serverError(($this->messages['SERVER_ERROR'] ?? 'Server Error: ') . $e->getMessage(), 500);
         }
     }
+
 
 
     /**

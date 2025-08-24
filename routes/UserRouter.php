@@ -129,6 +129,7 @@ final class UserRouter
 
         // GET /users
         if ($path === '/users') {
+            $isSA =  $this->authMiddleware->isSuperAdmin() ?? false;
             // Todos los roles menos CLIENT listan
             $this->authMiddleware->requireManySpecificRoles(
                 [
@@ -138,8 +139,8 @@ final class UserRouter
                 ],
                 null,
                 null,
-                function () {
-                    $this->userController->getAllUsers();
+                function () use ($isSA){
+                    $this->userController->getAllUsers($isSA);
                 }
             );
             return;

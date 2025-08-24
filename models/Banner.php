@@ -1,71 +1,48 @@
 <?php
-
 declare(strict_types=1);
 
-class Banner
+final class Banner implements JsonSerializable
 {
-    private ?int $idBanner = null;
-    private string $urlBanner;
+    private string  $bannerName;  // banner_top | banner_bottom
+    private ?string $imageUrl;    // URL absoluta o null
+    private bool    $active;
 
-    public function __construct(string $urlBanner)
+    public function __construct(string $bannerName, ?string $imageUrl = null, bool $active = false)
     {
-        $this->urlBanner = $urlBanner;
-    }
-
-    public function getIdBanner(): ?int
-    {
-        return $this->idBanner;
-    }
-    public function setIdBanner(int $idBanner): void
-    {
-        $this->idBanner = $idBanner;
+        $this->bannerName = $bannerName;
+        $this->imageUrl   = $imageUrl;
+        $this->active     = $active;
     }
 
-    public function getUrlBanner(): string
-    {
-        return $this->urlBanner;
-    }
-    public function setUrlBanner(string $urlBanner): void
-    {
-        $this->urlBanner = $urlBanner;
-    }
+    public function getBannerName(): string { return $this->bannerName; }
+    public function getImageUrl(): ?string { return $this->imageUrl; }
+    public function isActive(): bool { return $this->active; }
+
+    public function setImageUrl(?string $url): void { $this->imageUrl = $url; }
+    public function setActive(bool $active): void { $this->active = $active; }
 
     public function __toString(): string
     {
-        return "Banner: {$this->urlBanner}";
+        return "Banner({$this->bannerName}) active=" . ($this->active ? 'true' : 'false') . " url=" . ($this->imageUrl ?? 'null');
     }
 
-    public static function fromArray(array $data): self
+    public static function fromArray(array $row): self
     {
-        $banner = new self(
-            urlBanner: $data['banner']
+        return new self(
+            bannerName: (string)$row['banner_name'],
+            imageUrl  : isset($row['image_url']) ? (string)$row['image_url'] : null,
+            active    : (bool)$row['active']
         );
-
-        if (isset($data['id_banner'])) {
-            $banner->setIdBanner((int)$data['id_banner']);
-        }
-
-        return $banner;
     }
 
     public function toArray(): array
     {
         return [
-            'id_banner' => $this->idBanner,
-            'banner' => $this->urlBanner,
+            'banner_name' => $this->bannerName,
+            'image_url'   => $this->imageUrl,
+            'active'      => $this->active,
         ];
     }
-    public function toJson(): string
-    {
-        return json_encode($this->toArray());
-    }
-    
-    public static function fromJson(string $json): self
-    {
-        $data = json_decode($json, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new InvalidArgumentException('Invalid JSON format');
-        }
-        return self::fromArray($data);
-    }
+
+    public function jsonSerialize(): array { return $this->toArray(); }
 }

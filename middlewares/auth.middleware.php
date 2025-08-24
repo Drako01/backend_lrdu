@@ -109,6 +109,31 @@ class AuthMiddleware
         return $user ? $user->getRole()->value : null;
     }
 
+    // ✅ Devuelve true/false sin enviar JSON ni cortar la ejecución.
+    // ⚠️ Ojo: getAuthenticatedUserRole() ya asume que existe token. 
+    // Usalo después de pasar por isAuthenticated()/authorize().
+    public function isSuperAdmin(): bool
+    {
+        try {
+            $role = $this->getAuthenticatedUserRole(); // string|null (p.ej. "SUPERADMIN_ROLE")
+            if ($role === null) return false;
+
+            // Si tenés enum Role disponible, comparamos contra su value
+            if (class_exists('Role')) {
+                // Ajustá la constante si tu enum se llama distinto (SUPERADMIN vs SUPER_ADMIN)
+                $expected = Role::SUPERADMIN->value;
+                if ($role === $expected) return true;
+            }
+
+            // Fallback: normalizo y acepto variantes comunes
+            $r = strtoupper(str_replace([' ', '-'], '_', $role));
+            return in_array($r, ['SUPERADMIN_ROLE', 'SUPERADMIN', 'SUPER_ADMIN'], true);
+        } catch (\Throwable $e) {
+            // Si algo raro pasa, no tiramos respuesta JSON acá: solo devolvemos false.
+            return false;
+        }
+    }
+
     #endregion
 
     #region Metodos de Validacion de Roles de Usuarios

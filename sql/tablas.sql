@@ -70,8 +70,15 @@ CREATE TABLE IF NOT EXISTS productos (
 
 
 CREATE TABLE IF NOT EXISTS banners (
-  id_banner      INT PRIMARY KEY AUTO_INCREMENT,
-  banner         VARCHAR(512) NOT NULL, -- URL pública de la imagen
-  fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  fecha_actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  banner_name VARCHAR(32) PRIMARY KEY,              -- 'banner_top' | 'banner_bottom'
+  image_url   VARCHAR(512) NULL,                    -- URL absoluta
+  active      TINYINT(1) NOT NULL DEFAULT 0,        -- 0/1
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 🌱 Seed mínimo (idempotente)
+INSERT INTO banners (banner_name, image_url, active) VALUES
+('banner_top', NULL, 0),
+('banner_bottom', NULL, 0)
+ON DUPLICATE KEY UPDATE banner_name = VALUES(banner_name);

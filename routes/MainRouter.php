@@ -51,7 +51,7 @@ class MainRouter
         $this->authRouter       = new AuthRouter();
         $this->productsRouter   = new ProductsRouter();
         $this->categoryRouter   = new CategoryRouter();
-        $this->bannerRouter     = new BannersRouter();
+        $this->bannerRouter     = new BannersApiRouter();
         $this->authMiddleware   = new AuthMiddleware();
         $this->authController   = new AuthController();
     }
@@ -66,15 +66,16 @@ class MainRouter
                 '#^/activate$#',
                 '#^/reset-password-email$#',
                 '#^/all-products/?$#',
-                '#^/all-banners/?$#',
                 '#^/product-by-id/\d+/?$#',
                 '#^/all-categories/?$#',
                 '#^/category-by-id/\d+/?$#',
-                '#^/banner-by-id/\d+/?$#',
+                '#^/get-banner/?$#',
+                '#^/banners/?$#',
             ],
             'POST' => [
                 '#^/register$#',
                 '#^/login$#',
+                '#^/banners/?$#',
             ],
         ];
 
@@ -172,8 +173,8 @@ class MainRouter
         }
         // Luego: Banners
         if ($this->bannerRouter->handlesRoute($path)) {
-            return $this->bannerRouter->bannersRequest('POST', $path, $params);
-        }
+            return $this->bannerRouter->dispatch('POST', $path, $params);
+        };
 
         ResponseHelper::respondWithError('Ruta no encontrada: ' . $path, 404);
     }
@@ -217,7 +218,7 @@ class MainRouter
             return $this->categoryRouter->categoriesRequest('GET', $path, $queryParams);
         }
         if ($this->bannerRouter->handlesRoute($path)) {
-            return $this->bannerRouter->bannersRequest('GET', $path, $queryParams);
+            return $this->bannerRouter->dispatch('GET', $path, $queryParams);
         }
 
         ResponseHelper::respondWithError(['Ruta no encontrada.'], 404);
@@ -241,29 +242,8 @@ class MainRouter
         if ($this->categoryRouter->handlesRoute($path)) {
             return $this->categoryRouter->categoriesRequest('PUT', $path, $params);
         }
-        if ($this->bannerRouter->handlesRoute($path)) {
-            return $this->bannerRouter->bannersRequest('PUT', $path, $params);
-        }
-        if ($this->bannerRouter->handlesRoute($path)) {
-            return $this->bannerRouter->bannersRequest('PATCH', $path, $params);
-        }
         ResponseHelper::respondWithError('Ruta no encontrada: ' . $path, 404);
     }
-
-    // private function handlePatch($path, $params)
-    // {
-    //     // if ($this->productsRouter->handlesRoute($path)) {
-    //     //     return $this->productsRouter->productsRequest('PATCH', $path, $params);
-    //     // }
-    //     // if ($this->categoryRouter->handlesRoute($path)) {
-    //     //     return $this->categoryRouter->categoriesRequest('PATCH', $path, $params);
-    //     // }
-    //     if ($this->bannerRouter->handlesRoute($path)) {
-    //         return $this->bannerRouter->bannersRequest('PATCH', $path, $params);
-    //     }
-    //     ResponseHelper::respondWithError('Ruta no encontrada: ' . $path, 404);
-    // }
-
 
     /**
      * Manejar las solicitudes DELETE
@@ -278,9 +258,6 @@ class MainRouter
         }
         if ($this->categoryRouter->handlesRoute($path)) {
             return $this->categoryRouter->categoriesRequest('DELETE', $path, null);
-        }
-        if ($this->bannerRouter->handlesRoute($path)) {
-            return $this->bannerRouter->bannersRequest('DELETE', $path, null);
         }
         ResponseHelper::respondWithError('Ruta no encontrada: ' . $path, 404);
     }
