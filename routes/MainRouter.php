@@ -73,7 +73,7 @@ class MainRouter
                 '#^/banners/?$#',
             ],
             'POST' => [
-                '#^/register$#',
+                // '#^/register$#',
                 '#^/login$#',
                 '#^/banners/?$#',
             ],

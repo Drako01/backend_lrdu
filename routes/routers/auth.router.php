@@ -20,7 +20,7 @@ class AuthRouter
     public function handlesRoute($path)
     {
         $routes = [
-            '/register',
+            // '/register',
             '/login',
             '/logout',
         ];
@@ -32,9 +32,9 @@ class AuthRouter
     {
         switch ($path) {
             #region Autenticacion y Seguridad
-            case '/register':
-                $this->authController->register($params);
-                break;
+            // case '/register':
+            //     $this->authController->register($params);
+            //     break;
             case '/login':
                 $this->authController->login($params);
                 break;
