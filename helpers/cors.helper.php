@@ -5,7 +5,7 @@ function handleCORS(): void
     $allowedOrigins = [
         'https://losreyesdelusado.com.ar',
         'https://backend.losreyesdelusado.com.ar', // si llamás desde el mismo host
-        'https://app.losreyesdelusado.com.ar',
+        'https://admin.losreyesdelusado.com.ar',
         'http://localhost:3000',
         'http://localhost:5173',
     ];
