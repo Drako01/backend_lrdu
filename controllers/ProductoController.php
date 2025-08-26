@@ -32,7 +32,7 @@ final class ProductoController
 
             if ($isMultipart) {
                 $data = $_POST; // campos del producto
-                $files  = $_FILES;  
+                $files  = $_FILES;
                 $nombre = (string)($data['nombre'] ?? '');
                 $idCat  = (int)($data['id_categoria'] ?? $data['idCategoria'] ?? 0);
                 $catTag = $idCat > 0 ? $this->service->getCategoriaTag($idCat) : 'general';
@@ -153,39 +153,88 @@ final class ProductoController
         }
     }
 
-    /** PUT /productos/{id} */
+    /** POST (multipart) /productos/{id}  -> update */
     public function update(int $id, mixed $data): void
     {
         try {
             $ct = $_SERVER['CONTENT_TYPE'] ?? ($_SERVER['HTTP_CONTENT_TYPE'] ?? '');
             $isMultipart = (stripos($ct, 'multipart/form-data') !== false) || !empty($_FILES);
 
-            if ($isMultipart) {
-                $arr = $_POST;
-                // si mandan nuevas imágenes/video, reemplazamos lo existente
-                $nombre = (string)($arr['nombre'] ?? '');
-                // si no mandan nombre en el form de update, intento leerlo del actual:
-                if ($nombre === '') {
-                    $actual = $this->service->getById($id);
-                    if ($actual) $nombre = $actual->getNombre();
-                }
+            $arr = $isMultipart
+                ? $_POST
+                : (is_array($data) ? $data : (json_decode((string)$data, true) ?? []));
 
-                $idCat = (int)($arr['id_categoria'] ?? $arr['idCategoria'] ?? 0);
-                if ($idCat <= 0) {
-                    $actual = $this->service->getById($id);
-                    if ($actual) $idCat = $actual->getIdCategoria();
-                }
+            // 1) Traer producto actual (para conocer imágenes vigentes)
+            $actual     = $this->service->getById($id);
+            $existentes = $actual ? $actual->getImagenes() : [];
+
+            // Flags / parámetros opcionales
+            $replace = filter_var((string)($arr['replace_images'] ?? '0'), FILTER_VALIDATE_BOOLEAN);
+
+            // Normalizar remove_images (array, JSON o CSV)
+            $toRemove = [];
+            if (isset($arr['remove_images'])) {
+                $toRemove = is_array($arr['remove_images'])
+                    ? $arr['remove_images']
+                    : (json_decode((string)$arr['remove_images'], true) ?? explode(',', (string)$arr['remove_images']));
+                $toRemove = array_map('trim', (array)$toRemove);
+            }
+
+            // Normalizar keep_images (acepta array, JSON "[]", o CSV)
+            // Usamos array_key_exists para diferenciar "no vino" de "vino vacío"
+            $keep = null;
+            if (array_key_exists('keep_images', $arr)) {
+                $keep = is_array($arr['keep_images'])
+                    ? $arr['keep_images']
+                    : (json_decode((string)$arr['keep_images'], true) ?? explode(',', (string)$arr['keep_images']));
+                $keep = array_values(array_filter(array_map('trim', (array)$keep)));
+            }
+
+            // Subida de nuevos medios (si multipart)
+            $nuevas = [];
+            if ($isMultipart) {
+                $nombre = (string)($arr['nombre'] ?? ($actual?->getNombre() ?? ''));
+                $idCat  = (int)($arr['id_categoria'] ?? $arr['idCategoria'] ?? ($actual?->getIdCategoria() ?? 0));
                 $catTag = $idCat > 0 ? $this->service->getCategoriaTag($idCat) : 'general';
 
                 $media = $this->media->saveForProducto($_FILES, $nombre, $catTag);
-                if (!empty($media['images'])) $arr['imagen_principal'] = $media['images'];
-                if (!empty($media['video']))  $arr['video_url']        = $media['video'];
-            } else {
-                $arr = is_array($data) ? $data : (json_decode((string)$data, true) ?? []);
+                if (!empty($media['images'])) $nuevas = (array)$media['images'];
+                if (!empty($media['video']))  $arr['video_url'] = $media['video'];
             }
 
+            // 2) Calcular set final de imágenes
+            $final = $replace ? [] : $existentes;
+
+            if ($toRemove) {
+                $final = array_values(array_filter(
+                    $final,
+                    fn($u) => !in_array($u, $toRemove, true)
+                ));
+            }
+
+            if ($keep !== null) {
+                // Si vino keep (incluso vacío), conservamos SOLO las indicadas
+                $final = array_values(array_intersect($final, $keep));
+            }
+
+            if ($nuevas) {
+                $final = array_values(array_unique(array_merge($final, $nuevas)));
+            }
+
+            // Limitar a 3 SIEMPRE (incluso si queda vacío)
+            $arr['imagen_principal'] = array_slice($final, 0, 3);
+
+            // Borrado explícito de video
+            if (!empty($arr['remove_video'])) {
+                $arr['video_url'] = null;
+            }
+
+            // Persistir
             $this->service->update($id, $arr);
-            ResponseHelper::success("El producto $id fue actualizado correctamente.", 200);
+
+            // Devolver el producto actualizado (para que el front pinte los valores finales)
+            $updated = $this->service->getById($id);
+            ResponseHelper::success($updated?->toArray() ?? ['id_producto' => $id], 200, 'producto');
         } catch (InvalidArgumentException $e) {
             ResponseHelper::error($e->getMessage(), 400);
         } catch (PDOException $e) {
