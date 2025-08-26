@@ -7,6 +7,10 @@ function handleCORS(): void
         'https://backend.losreyesdelusado.com.ar', // si llamás desde el mismo host
         'https://admin.losreyesdelusado.com.ar',
         'http://localhost:3000',
+        'http://localhost:5000',
+        'http://localhost:80',
+        'http://localhost:8080',
+        'http://localhost:3001',
         'http://localhost:5173',
     ];
 
