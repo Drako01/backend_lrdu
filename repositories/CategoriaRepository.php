@@ -88,4 +88,33 @@ final class CategoriaRepository implements CategoriaRepositoryInterface
         }
         return (bool)$st->fetchColumn();
     }
+
+    public function findAllWithCounts(): array
+    {
+        $sql = "
+                SELECT c.id_cat, c.nombre, COUNT(p.id_producto) AS productos
+                FROM categorias c
+                LEFT JOIN productos p ON p.id_categoria = c.id_cat
+                GROUP BY c.id_cat, c.nombre
+                ORDER BY c.nombre ASC
+            ";
+        $st = $this->pdo->query($sql);
+
+        $out = [];
+        while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+            $out[] = [
+                'id_cat'    => (int)$row['id_cat'],
+                'nombre'    => (string)$row['nombre'],
+                'productos' => (int)$row['productos'], // 0 si no tiene
+            ];
+        }
+        return $out;
+    }
+
+    public function countProductsByCategory(int $id): int
+    {
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM productos WHERE id_categoria = :id');
+        $st->execute([':id' => $id]);
+        return (int)$st->fetchColumn();
+    }
 }

@@ -80,4 +80,17 @@ final class CategoriaService
         $this->repo->delete($id);
         return true;
     }
+
+    public function getAllWithCounts(): array
+    {
+        return $this->repo->findAllWithCounts();
+    }
+
+    public function getCountByCategory(int $id): int
+    {
+        if ($id <= 0) {
+            throw new InvalidArgumentException('ID de categoría inválido.');
+        }
+        return $this->repo->countProductsByCategory($id);
+    }
 }

@@ -50,6 +50,19 @@ final class CategoriaController
     public function getAll(): void
     {
         try {
+            // lee querystring ?withCounts=1|true|yes|on
+            $withCounts = false;
+            if (isset($_GET['withCounts'])) {
+                $v = strtolower((string)$_GET['withCounts']);
+                $withCounts = in_array($v, ['1', 'true', 'yes', 'on'], true);
+            }
+
+            if ($withCounts) {
+                $rows = $this->service->getAllWithCounts(); // ← incluye 'productos'
+                ResponseHelper::success($rows, 200, 'categorias');
+                return;
+            }
+
             $cats = $this->service->getAll();
             $payload = array_map(fn(Categoria $c) => $c->toArray(), $cats);
             ResponseHelper::success($payload, 200, 'categorias');
@@ -57,6 +70,7 @@ final class CategoriaController
             ResponseHelper::serverError(($this->messages['SERVER_ERROR'] ?? 'Error: ') . $e->getMessage(), 500);
         }
     }
+
 
     /** GET /categorias/{id} */
     public function getById(int $id): void
